@@ -58,6 +58,7 @@ impl State {
     pub fn view(&self) -> Container<'_, Message> {
         center(
             column![
+                // text column
                 column![
                     text("icecutter")
                         .size(25),
@@ -67,6 +68,7 @@ impl State {
                 .spacing(5)
                 .padding(10),
 
+                // from:to textboxes
                 row![
                     text_input("from", &self.from)
                         .on_input(Message::From),
@@ -77,16 +79,26 @@ impl State {
                 ]
                 .spacing(10)
                 .width(150),
-
-                text_input("file name", &self.file)
-                    .on_input(Message::File),
                 
-                text_input("fps", &self.fps)
-                    .on_input(Message::Fps),
-
+                // file name
+                container(
+                    text_input("file name", &self.file)
+                        .on_input(Message::File),
+                )
+                .width(400),
+                
+                // fps, we set the width a bit lower
+                container(
+                    text_input("fps", &self.fps)
+                        .on_input(Message::Fps),
+                )
+                .width(75),
+                
+                // 720p checkbox
                 checkbox("convert to 720p", self.convert_720p)
                     .on_toggle(Message::Convert),
 
+                // convert button
                 button("convert")
             ]
             .align_x(Center)
