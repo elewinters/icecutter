@@ -86,8 +86,14 @@ impl State {
                     .set_file_name(format!("[converted] {}", &self.file))
                     .save_file();
 
-                if let Some(output) = output {
-                    super::convert(self, output);
+                let output = match output {
+                    Some(output) => output,
+                    None => return
+                };
+
+                match super::convert(self, &output) {
+                    Ok(_) => (),
+                    Err(_) => return,
                 }
             }
         }

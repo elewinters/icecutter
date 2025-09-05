@@ -54,7 +54,7 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 
 // converts the video via fffmpeg
 // expects sanitized input
-pub fn convert(state: &ui::State, output: PathBuf) {
+pub fn convert(state: &ui::State, output: &PathBuf) -> Result<(), Box<dyn Error>> {
     // handle arguments
     let convert_720p = vec!["-vf", "scale=-1:720"];
     let cut = vec!["-ss", &state.from, "-to", &state.to];
@@ -86,9 +86,11 @@ pub fn convert(state: &ui::State, output: PathBuf) {
     // run command
     let command = Command::new("ffmpeg")
         .args(&arguments)
-        .spawn();
+        .spawn()?;
 
     println!("{:?}", arguments);
+
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
