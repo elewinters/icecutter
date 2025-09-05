@@ -1,5 +1,4 @@
 use std::env;
-use std::io;
 
 use std::error::Error;
 use std::process::{Command, Stdio};
@@ -22,7 +21,7 @@ fn check_program(program: &str) -> Result<(), String> {
     }
 }
 
-fn video_length(video: &str) -> Result<String, io::Error> {
+fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     let output = Command::new("ffprobe")
         .arg("-i")
         .arg(video)
@@ -35,8 +34,13 @@ fn video_length(video: &str) -> Result<String, io::Error> {
         .arg("-sexagesimal")
         .output()?;
 
+    // check if success
+    if !output.status.success() {
+        return Err("ffprobe command failed, is the file name valid?".into());
+    }
+
     // get output from command and split by : and . so that we can get only the minutes and seconds
-    let output = String::from_utf8(output.stdout).unwrap();
+    let output = String::from_utf8(output.stdout)?;
     let output: Vec<&str> = output.split(&[':', '.']).collect();
 
     let minutes = &output[1];
@@ -52,10 +56,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     check_program("ffmpeg")?;
     check_program("ffprobe")?;
 
-    let length = match file {
-        Some(ref file) => Some(video_length(file)?),
-        None => None,
-    };
+    // get length of video if the file argument exists
+    let length = file.as_ref().map(|f| video_length(f)).transpose()?;
 
     let window_settings = iced::window::Settings {
         size: (640.0, 480.0).into(),
@@ -69,16 +71,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             (
                 ui::State {
                     file: file.unwrap_or_default(),
-
-                    from: if length.is_some() {
-                        String::from("00:00")
-                    }
-                    else {
-                        Default::default()
-                    },
-
+                    // set "from" string to 00:00 if length is valid
+                    from: length.as_ref().map_or(String::default(), |_| String::from("00:00")),
                     to: length.unwrap_or_default(),
-                    
                     ..Default::default()
                 },
                 iced::Task::none()
