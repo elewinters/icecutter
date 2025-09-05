@@ -99,12 +99,15 @@ impl State {
                 // text column
                 column![
                     text("icecutter")
-                        .size(25),
-                    text("takes a video file, cuts it, and then compresses it with the specified configuration")
+                        .size(30),
+                    text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
+                        .center(),
+                    text("primarly built for quickly cutting and compressing clips to upload to discord")
+                        .size(12)
                 ]
-                .align_x(Center)
-                .spacing(5)
-                .padding(10),
+                .spacing(5),
+
+                horizontal_rule(1),
 
                 // from:to textboxes
                 row![
