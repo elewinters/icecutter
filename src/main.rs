@@ -1,7 +1,6 @@
 use iced::*;
 use iced::widget::{*, column};
 
-#[derive(Default)]
 struct State {
     from: String,
     to: String,
@@ -11,16 +10,39 @@ struct State {
     convert_720p: bool
 }
 
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            from: String::default(),
+            to: String::default(),
+
+            file: String::default(),
+            fps: String::from("60"),
+            convert_720p: false
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
+    From(String),
+    To(String),
+
     File(String),
     Fps(String),
-    Convert(bool)
+    Convert(bool),
 }
 
 impl State {
     fn update(&mut self, message: Message) {
         match message {
+            Message::From(from) => {
+                self.from = from;
+            }
+            Message::To(to) => {
+                self.to = to;
+            }
+
             Message::File(file) => {
                 self.file = file;
             }
@@ -46,10 +68,12 @@ impl State {
                 .padding(10),
 
                 row![
-                    text_input("from", &self.from),
+                    text_input("from", &self.from)
+                        .on_input(Message::From),
                     text("-")
                         .size(20),
                     text_input("to", &self.to)
+                        .on_input(Message::To),
                 ]
                 .spacing(10)
                 .width(150),
@@ -61,10 +85,12 @@ impl State {
                     .on_input(Message::Fps),
 
                 checkbox("convert to 720p", self.convert_720p)
-                    .on_toggle(Message::Convert)
+                    .on_toggle(Message::Convert),
+
+                button("convert")
             ]
             .align_x(Center)
-            .padding(100)
+            .padding(50)
             .spacing(10)
         )
     }
@@ -79,5 +105,7 @@ fn main() -> iced::Result {
 
     iced::application("icecutter", State::update, State::view)
         .window(window_settings)
-        .run()
+        .run_with(|| {
+            (State::default(), Task::none())
+        })
 }
