@@ -32,7 +32,7 @@ pub enum Message {
     ChangeFps(String),
     ChangeConvert720p(bool),
 
-    ClickConvert,
+    FileDialog,
     FileSelected(Option<rfd::FileHandle>),
 }
 
@@ -86,7 +86,7 @@ impl State {
                 Task::none()
             }
 
-            Message::ClickConvert => {
+            Message::FileDialog => {
                 let file_name = format!("[converted] {}", &self.file);
                 Task::perform(
                     async {
@@ -101,16 +101,19 @@ impl State {
             }
 
             Message::FileSelected(file) => {
-                let output = match file {
-                    Some(output) => output,
-                    None => return Task::none()
+                let Some(output) = file else {
+                    return Task::none() 
                 };
 
-                match super::convert(self, &output.path().to_str().unwrap()) {
-                    Ok(_) => (),
-                    Err(_) => return Task::none(),
+                let Some(path) = output.path().to_str() else { 
+                    return Task::none() 
+                };
+                
+                if let Err(err) = super::convert(self, path) {
+                    println!("{err}");
+                    return Task::none()
                 }
-
+                
                 Task::none()
             }
         }
@@ -165,7 +168,7 @@ impl State {
                 // convert button
                 button("convert")
                     .on_press_maybe(match validate_state(self) {
-                        true => Some(Message::ClickConvert),
+                        true => Some(Message::FileDialog),
                         false => None
                     })
             ]
