@@ -51,6 +51,34 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("{minutes}:{seconds}"))
 }
 
+// returns the FPS of the video
+fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
+    // ffprobe command to get FPS in FPS/1 format
+    let output = Command::new("ffprobe")
+        .arg("-i")
+        .arg(video)
+        .arg("-select_streams")
+        .arg("v")
+        .arg("-show_entries")
+        .arg("stream=r_frame_rate")
+        .arg("-v")
+        .arg("quiet")
+        .arg("-of")
+        .arg("csv=p=0")
+        .output()?;
+
+    // check if success
+    if !output.status.success() {
+        return Err(format!("ffprobe command failed, is the file name '{video}' valid?").into());
+    }
+
+    // get output from command and split by / so we only get the actual fps
+    let output = String::from_utf8(output.stdout)?;
+    let output: Vec<&str> = output.split('/').collect();
+
+    Ok(String::from(output[0]))
+}
+
 // converts the video via fffmpeg
 // expects sanitized input
 pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
@@ -100,8 +128,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     check_program("ffmpeg")?;
     check_program("ffprobe")?;
 
-    // get length of video if the file argument exists
+    // get length and FPS of video if the file argument exists
     let length: Option<String> = file.as_ref().map(|f| video_length(f)).transpose()?;
+    let fps: Option<String> = file.as_ref().map(|f| video_fps(f)).transpose()?;
 
     // run iced application with custom initial state
     iced::application("icecutter", ui::State::update, ui::State::view)
@@ -118,6 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     to: length.unwrap_or_default(),
 
                     file: file.unwrap_or_default(),
+                    fps: fps.unwrap_or_default(),
                     ..Default::default()
                 },
                 iced::Task::none()

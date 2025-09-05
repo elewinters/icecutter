@@ -17,7 +17,7 @@ impl Default for State {
             to: String::default(),
 
             file: String::default(),
-            fps: String::from("60"),
+            fps: String::default(),
             convert_720p: false
         }
     }
