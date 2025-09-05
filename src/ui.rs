@@ -35,6 +35,25 @@ pub enum Message {
     ClickConvert,
 }
 
+fn validate_timestamp(timestamp: &str) -> bool {
+    let split: Vec<&str> = timestamp.split(':').collect();
+
+    let minutes = split.get(0);
+    let seconds = split.get(1);
+
+    match (minutes, seconds) {
+        (Some(x), Some(y)) if x.parse::<u32>().is_ok() && y.parse::<u32>().is_ok() => true,
+        _ => false
+    }
+}
+
+fn validate_state(state: &State) -> bool {
+    validate_timestamp(&state.from) &&
+    validate_timestamp(&state.to) &&
+    !state.file.is_empty() &&
+    state.fps.parse::<u32>().is_ok()
+}
+
 impl State {
     pub fn update(&mut self, message: Message) {
         match message {
@@ -105,7 +124,10 @@ impl State {
 
                 // convert button
                 button("convert")
-                    .on_press(Message::ClickConvert)
+                    .on_press_maybe(match validate_state(self) {
+                        true => Some(Message::ClickConvert),
+                        false => None
+                    })
             ]
             .align_x(Center)
             .padding(50)
