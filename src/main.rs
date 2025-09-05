@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 
 mod ui;
 
-// runs to check if this program is properly installed on the system
+// check if specified program is properly installed on the system
 fn check_program(program: &str) -> Result<(), String> {
     let command = Command::new(program)
         .arg("-version")
@@ -21,7 +21,9 @@ fn check_program(program: &str) -> Result<(), String> {
     }
 }
 
+// returns the length of the video in MM:SS format
 fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
+    // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
     let output = Command::new("ffprobe")
         .arg("-i")
         .arg(video)
@@ -50,29 +52,31 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let file = env::args().nth(1);
+    // get video file command line argument, this can be None
+    let file: Option<String> = env::args().nth(1);
 
+    // check if required programs are installed
     check_program("ffmpeg")?;
     check_program("ffprobe")?;
 
     // get length of video if the file argument exists
-    let length = file.as_ref().map(|f| video_length(f)).transpose()?;
+    let length: Option<String> = file.as_ref().map(|f| video_length(f)).transpose()?;
 
-    let window_settings = iced::window::Settings {
-        size: (640.0, 480.0).into(),
-        resizable: false,
-        ..Default::default()
-    };
-
+    // run iced application with custom initial state
     iced::application("icecutter", ui::State::update, ui::State::view)
-        .window(window_settings)
+        .window(iced::window::Settings {
+            size: (640.0, 480.0).into(),
+            resizable: false,
+            ..Default::default()
+        })
         .run_with(|| {
             (
                 ui::State {
-                    file: file.unwrap_or_default(),
                     // set "from" string to 00:00 if length is valid
                     from: length.as_ref().map_or(String::default(), |_| String::from("00:00")),
                     to: length.unwrap_or_default(),
+
+                    file: file.unwrap_or_default(),
                     ..Default::default()
                 },
                 iced::Task::none()
