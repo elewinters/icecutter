@@ -1,6 +1,7 @@
 use std::env;
 
 use std::error::Error;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 mod ui;
@@ -51,8 +52,11 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("{minutes}:{seconds}"))
 }
 
-pub fn convert(state: &ui::State) {
+// converts the video via fffmpeg
+// expects sanitized input
+pub fn convert(state: &ui::State, output: PathBuf) {
     println!("{}", state.file);
+    println!("{:?}", output);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

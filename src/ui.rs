@@ -74,7 +74,14 @@ impl State {
             }
 
             Message::ClickConvert => {
-                super::convert(self);
+                let output = rfd::FileDialog::new()
+                    .set_title("save converted video")
+                    .set_file_name(format!("[converted] {}", &self.file))
+                    .save_file();
+
+                if let Some(output) = output {
+                    super::convert(self, output);
+                }
             }
         }
     }
