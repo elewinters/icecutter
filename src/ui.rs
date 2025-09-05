@@ -25,32 +25,37 @@ impl Default for State {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    From(String),
-    To(String),
+    ChangeFrom(String),
+    ChangeTo(String),
 
-    File(String),
-    Fps(String),
-    Convert(bool),
+    ChangeFile(String),
+    ChangeFps(String),
+    ChangeConvert720p(bool),
+
+    ClickConvert,
 }
 
 impl State {
     pub fn update(&mut self, message: Message) {
         match message {
-            Message::From(from) => {
+            Message::ChangeFrom(from) => {
                 self.from = from;
             }
-            Message::To(to) => {
+            Message::ChangeTo(to) => {
                 self.to = to;
             }
-
-            Message::File(file) => {
+            Message::ChangeFile(file) => {
                 self.file = file;
             }
-            Message::Fps(fps) => {
+            Message::ChangeFps(fps) => {
                 self.fps = fps;
             }
-            Message::Convert(convert) => {
+            Message::ChangeConvert720p(convert) => {
                 self.convert_720p = convert;
+            }
+
+            Message::ClickConvert => {
+                super::convert(self);
             }
         }
     }
@@ -71,11 +76,11 @@ impl State {
                 // from:to textboxes
                 row![
                     text_input("from", &self.from)
-                        .on_input(Message::From),
+                        .on_input(Message::ChangeFrom),
                     text("-")
                         .size(20),
                     text_input("to", &self.to)
-                        .on_input(Message::To),
+                        .on_input(Message::ChangeTo),
                 ]
                 .spacing(10)
                 .width(150),
@@ -83,23 +88,24 @@ impl State {
                 // file name
                 container(
                     text_input("file name", &self.file)
-                        .on_input(Message::File),
+                        .on_input(Message::ChangeFile),
                 )
                 .width(400),
                 
                 // fps, we set the width a bit lower
                 container(
                     text_input("fps", &self.fps)
-                        .on_input(Message::Fps),
+                        .on_input(Message::ChangeFps),
                 )
                 .width(75),
                 
                 // 720p checkbox
                 checkbox("convert to 720p", self.convert_720p)
-                    .on_toggle(Message::Convert),
+                    .on_toggle(Message::ChangeConvert720p),
 
                 // convert button
                 button("convert")
+                    .on_press(Message::ClickConvert)
             ]
             .align_x(Center)
             .padding(50)

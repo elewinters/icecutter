@@ -51,6 +51,10 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("{minutes}:{seconds}"))
 }
 
+pub fn convert(state: &ui::State) {
+    println!("{}", state.file);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     // get video file command line argument, this can be None
     let file: Option<String> = env::args().nth(1);
