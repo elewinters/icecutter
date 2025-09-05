@@ -7,7 +7,9 @@ pub struct State {
 
     pub file: String,
     pub fps: String,
-    pub convert_720p: bool
+    pub convert_720p: bool,
+
+    pub progress: f32,
 }
 
 impl Default for State {
@@ -18,7 +20,8 @@ impl Default for State {
 
             file: String::default(),
             fps: String::default(),
-            convert_720p: false
+            convert_720p: false,
+            progress: 50.0
         }
     }
 }
@@ -170,10 +173,25 @@ impl State {
                     .on_press_maybe(match validate_state(self) {
                         true => Some(Message::FileDialog),
                         false => None
-                    })
+                    }),
+                
+                if true {
+                    column![
+                        text("processing with ffmpeg..."),
+                        progress_bar(0.0..=100.0, self.progress)
+                            .height(15)
+                    ]
+                    .align_x(Center)
+                    .padding(25)
+                    .spacing(10)
+                    .into()
+                }
+                else {
+                    Element::new(Space::new(0, 0))
+                }
             ]
             .align_x(Center)
-            .padding(50)
+            .padding(25)
             .spacing(10)
         )
     }
