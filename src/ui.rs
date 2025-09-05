@@ -96,7 +96,7 @@ impl State {
                             .save_file()
                             .await
                     },
-                    |file| Message::FileSelected(file),
+                    Message::FileSelected
                 )
             }
 
