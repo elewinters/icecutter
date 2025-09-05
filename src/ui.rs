@@ -89,7 +89,7 @@ impl State {
             Message::ClickConvert => {
                 let file_name = format!("[converted] {}", &self.file);
                 Task::perform(
-                    async move {
+                    async {
                         rfd::AsyncFileDialog::new()
                             .set_title("save converted video")
                             .set_file_name(file_name)

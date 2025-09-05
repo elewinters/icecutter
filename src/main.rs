@@ -1,7 +1,6 @@
 use std::env;
 
 use std::error::Error;
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 mod ui;
