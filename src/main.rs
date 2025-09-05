@@ -36,7 +36,7 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 
     // check if success
     if !output.status.success() {
-        return Err("ffprobe command failed, is the file name valid?".into());
+        return Err(format!("ffprobe command failed, is the file name '{video}' valid?").into());
     }
 
     // get output from command and split by : and . so that we can get only the minutes and seconds
@@ -50,8 +50,7 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    let file = args.get(1).cloned();
+    let file = env::args().nth(1);
 
     check_program("ffmpeg")?;
     check_program("ffprobe")?;
