@@ -48,8 +48,15 @@ fn validate_timestamp(timestamp: &str) -> bool {
 }
 
 fn validate_state(state: &State) -> bool {
-    validate_timestamp(&state.from) &&
-    validate_timestamp(&state.to) &&
+    // both timestamps being empty is valid, but only one of them being empty is not
+    let timestamps = if state.from.is_empty() && state.to.is_empty() {
+        true
+    }
+    else {
+        validate_timestamp(&state.from) && validate_timestamp(&state.to)
+    };
+
+    timestamps &&
     !state.file.is_empty() &&
     state.fps.parse::<u32>().is_ok()
 }
