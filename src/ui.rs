@@ -33,6 +33,7 @@ pub enum Message {
     ChangeConvert720p(bool),
 
     ClickConvert,
+    FileSelected(Option<rfd::FileHandle>),
 }
 
 fn validate_timestamp(timestamp: &str) -> bool {
@@ -62,39 +63,55 @@ fn validate_state(state: &State) -> bool {
 }
 
 impl State {
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ChangeFrom(from) => {
                 self.from = from;
+                Task::none()
             }
             Message::ChangeTo(to) => {
                 self.to = to;
+                Task::none()
             }
             Message::ChangeFile(file) => {
                 self.file = file;
+                Task::none()
             }
             Message::ChangeFps(fps) => {
                 self.fps = fps;
+                Task::none()
             }
             Message::ChangeConvert720p(convert) => {
                 self.convert_720p = convert;
+                Task::none()
             }
 
             Message::ClickConvert => {
-                let output = rfd::FileDialog::new()
-                    .set_title("save converted video")
-                    .set_file_name(format!("[converted] {}", &self.file))
-                    .save_file();
+                let file_name = format!("[converted] {}", &self.file);
+                Task::perform(
+                    async move {
+                        rfd::AsyncFileDialog::new()
+                            .set_title("save converted video")
+                            .set_file_name(file_name)
+                            .save_file()
+                            .await
+                    },
+                    |file| Message::FileSelected(file),
+                )
+            }
 
-                let output = match output {
+            Message::FileSelected(file) => {
+                let output = match file {
                     Some(output) => output,
-                    None => return
+                    None => return Task::none()
                 };
 
-                match super::convert(self, &output) {
+                match super::convert(self, &output.path().to_str().unwrap()) {
                     Ok(_) => (),
-                    Err(_) => return,
+                    Err(_) => return Task::none(),
                 }
+
+                Task::none()
             }
         }
     }
