@@ -6,19 +6,20 @@ use std::process::{Command, Stdio};
 
 mod ui;
 
-// runs to check if ffmpeg is properly installed on the system
-fn check_ffmpeg() -> bool {
-    let command = Command::new("ffmpeg")
+// runs to check if this program is properly installed on the system
+fn check_program(program: &str) -> Result<(), String> {
+    let command = Command::new(program)
         .arg("-version")
-        .stdout(Stdio::null()) // dont print ffmpeg output to console
+        .stdout(Stdio::null()) // dont print ffmpeg/ffprobe output to console
         .status();
     
-    let status = match command {
-        Ok(status) => status,
-        Err(_) => return false,
-    };
+    let err = Err(format!("failed to detect {program} on this system, are you sure it's been installed correctly?"));
 
-    status.success()
+    match command {
+        Ok(status) if !status.success() => return err,
+        Err(_) => return err,
+        _ => Ok(())
+    }
 }
 
 fn video_length(video: &str) -> Result<String, io::Error> {
@@ -48,9 +49,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let file = args.get(1).cloned();
 
-    if !check_ffmpeg() {
-        return Err("failed to detect ffmpeg on this system".into());
-    }
+    check_program("ffmpeg")?;
+    check_program("ffprobe")?;
 
     let length = match file {
         Some(ref file) => Some(video_length(file)?),
