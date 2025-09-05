@@ -16,8 +16,8 @@ fn check_program(program: &str) -> Result<(), String> {
     let err = Err(format!("failed to detect {program} on this system, are you sure it's been installed correctly?"));
 
     match command {
-        Ok(status) if !status.success() => return err,
-        Err(_) => return err,
+        Ok(status) if !status.success() => err,
+        Err(_) => err,
         _ => Ok(())
     }
 }
