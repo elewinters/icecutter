@@ -50,6 +50,11 @@ fn validate_timestamp(timestamp: &str) -> bool {
     let minutes = split.get(0);
     let seconds = split.get(1);
 
+    // return false if we have more than one colon
+    if split.len() > 2 {
+        return false
+    }
+
     match (minutes, seconds) {
         (Some(x), Some(y)) if x.parse::<u32>().is_ok() && y.parse::<u32>().is_ok() => true,
         _ => false
