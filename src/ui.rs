@@ -117,13 +117,12 @@ impl State {
 
             Message::FileDialog => {
                 let file_name = format!("[converted] {}", &self.file);
-                Task::perform(
-                    async {
-                        rfd::AsyncFileDialog::new()
-                            .set_title("save converted video")
-                            .set_file_name(file_name)
-                            .save_file()
-                            .await
+                Task::perform(async {
+                    rfd::AsyncFileDialog::new()
+                        .set_title("save converted video")
+                        .set_file_name(file_name)
+                        .save_file()
+                        .await
                     },
                     Message::FileSelected
                 )
@@ -157,12 +156,12 @@ impl State {
 
         column(
             errors.into_iter()
-                .map(|error| 
+                .map(|error| {
                     text(error)
                         .color(Color::from_rgb(1.0, 0.0, 0.0))
                         .size(12)
                         .into()
-                )
+                })
                 .collect::<Vec<Element<Message>>>()
         )
         .spacing(5)
