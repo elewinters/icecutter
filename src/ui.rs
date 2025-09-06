@@ -40,6 +40,11 @@ pub enum Message {
 }
 
 fn validate_timestamp(timestamp: &str) -> bool {
+    // an empty timestamp is also valid
+    if timestamp.is_empty() {
+        return true;
+    }
+
     let split: Vec<&str> = timestamp.split(':').collect();
 
     let minutes = split.get(0);
@@ -54,22 +59,31 @@ fn validate_timestamp(timestamp: &str) -> bool {
 fn validate_state(state: &State) -> Vec<String> {
     let mut errors = Vec::new();
 
-    // both timestamps being empty is valid, but only one of them being empty is not
-    let timestamps = if state.from.is_empty() && state.to.is_empty() {
-        true
-    }
-    else {
-        validate_timestamp(&state.from) && validate_timestamp(&state.to)
-    };
-
-    if !timestamps {
-        errors.push(String::from("invalid timestamps"));
+    // check if only one of the timestamps is filled and throw an error
+    if state.to.is_empty() && !state.from.is_empty() {
+        errors.push(String::from("'to' timestamp is empty, while the 'from' timestamp is not"));
     }
 
+    if state.from.is_empty() && !state.to.is_empty() {
+        errors.push(String::from("'from' timestamp is empty, while the 'to' timestamp is not"));
+    }
+
+    // check if both timestamps are in the proper format
+    // if one of these is empty it will also return true
+    if !validate_timestamp(&state.from) {
+        errors.push(String::from("'from' timestamp is not in a valid MM:SS format"));
+    }
+
+    if !validate_timestamp(&state.to) {
+        errors.push(String::from("'to' timestamp is not in a valid MM:SS format"));
+    }
+
+    // check if file name field is empty
     if state.file.is_empty() {
-        errors.push(String::from("'file' field is empty"));
+        errors.push(String::from("'file name' field is empty"));
     }
 
+    // check if fps field is a valid number
     if !state.fps.parse::<u32>().is_ok() {
         errors.push(String::from("'fps' field is not a valid unsigned integer"))
     }
