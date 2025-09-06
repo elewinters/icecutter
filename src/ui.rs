@@ -78,9 +78,9 @@ fn validate_state(state: &State) -> Vec<String> {
         errors.push(String::from("'to' timestamp is not in a valid MM:SS format"));
     }
 
-    // check if file name field is empty
+    // check if input file field is empty
     if state.file.is_empty() {
-        errors.push(String::from("'file name' field is empty"));
+        errors.push(String::from("'input file' field is empty"));
     }
 
     // check if fps field is a valid number
@@ -170,7 +170,7 @@ impl State {
     }
 
     fn progress_view(&self) -> Element<'_, Message> {
-        let condition = true;
+        let condition = false;
 
         if !condition {
             return Space::new(0, 0).into();
@@ -215,9 +215,9 @@ impl State {
                 .spacing(10)
                 .width(150),
                 
-                // file name
+                // input file
                 container(
-                    text_input("file name", &self.file)
+                    text_input("input file", &self.file)
                         .on_input(Message::ChangeFile),
                 )
                 .width(400),

@@ -38,7 +38,7 @@ fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 
     // check if success
     if !output.status.success() {
-        return Err(format!("ffprobe command failed, is the file name '{video}' valid?").into());
+        return Err(format!("ffprobe command failed, is the input file '{video}' valid?").into());
     }
 
     // get output from command and split by : and . so that we can get only the minutes and seconds
@@ -69,7 +69,7 @@ fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 
     // check if success
     if !output.status.success() {
-        return Err(format!("ffprobe command failed, is the file name '{video}' valid?").into());
+        return Err(format!("ffprobe command failed, is the input file '{video}' valid?").into());
     }
 
     // get output from command and split by / so we only get the actual fps
@@ -121,7 +121,7 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // get video file command line argument, this can be None
+    // get input video file command line argument, this can be None
     let file: Option<String> = env::args().nth(1);
 
     // check if required programs are installed
