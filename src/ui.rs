@@ -51,7 +51,9 @@ fn validate_timestamp(timestamp: &str) -> bool {
     }
 }
 
-fn validate_state(state: &State) -> bool {
+fn validate_state(state: &State) -> Vec<String> {
+    let mut errors = Vec::new();
+
     // both timestamps being empty is valid, but only one of them being empty is not
     let timestamps = if state.from.is_empty() && state.to.is_empty() {
         true
@@ -60,9 +62,19 @@ fn validate_state(state: &State) -> bool {
         validate_timestamp(&state.from) && validate_timestamp(&state.to)
     };
 
-    timestamps &&
-    !state.file.is_empty() &&
-    state.fps.parse::<u32>().is_ok()
+    if !timestamps {
+        errors.push(String::from("invalid timestamps"));
+    }
+
+    if state.file.is_empty() {
+        errors.push(String::from("'file' field is empty"));
+    }
+
+    if !state.fps.parse::<u32>().is_ok() {
+        errors.push(String::from("'fps' field is not a valid unsigned integer"))
+    }
+
+    return errors
 }
 
 impl State {
@@ -122,6 +134,27 @@ impl State {
         }
     }
 
+    fn error_view(&self) -> Element<'_, Message> {
+        let errors = validate_state(self);
+        
+        if errors.is_empty() {
+            return Space::new(0, 0).into();
+        }
+
+        column(
+            errors.into_iter()
+                .map(|error| 
+                    text(error)
+                        .color(Color::from_rgb(1.0, 0.0, 0.0))
+                        .size(12)
+                        .into()
+                )
+                .collect::<Vec<Element<Message>>>()
+        )
+        .spacing(5)
+        .into()
+    }
+
     pub fn view(&self) -> Container<'_, Message> {
         center(
             column![
@@ -168,14 +201,17 @@ impl State {
                 checkbox("convert to 720p", self.convert_720p)
                     .on_toggle(Message::ChangeConvert720p),
 
+                // errors
+                self.error_view(),
+
                 // convert button
                 button("convert")
-                    .on_press_maybe(match validate_state(self) {
+                    .on_press_maybe(match validate_state(self).is_empty() {
                         true => Some(Message::FileDialog),
                         false => None
                     }),
                 
-                if true {
+                if false {
                     column![
                         text("processing with ffmpeg..."),
                         progress_bar(0.0..=100.0, self.progress)
