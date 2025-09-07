@@ -33,7 +33,7 @@ fn validate_timestamp(timestamp: &str) -> bool {
 
     let split: Vec<&str> = timestamp.split(':').collect();
 
-    let minutes = split.get(0);
+    let minutes = split.first();
     let seconds = split.get(1);
 
     // return false if we have more than one colon
@@ -41,10 +41,8 @@ fn validate_timestamp(timestamp: &str) -> bool {
         return false
     }
 
-    match (minutes, seconds) {
-        (Some(x), Some(y)) if x.parse::<u32>().is_ok() && y.parse::<u32>().is_ok() => true,
-        _ => false
-    }
+    // if minutes and seconds exist and if they're both valid u32 integers, we return true
+    matches!((minutes, seconds), (Some(x), Some(y)) if x.parse::<u32>().is_ok() && y.parse::<u32>().is_ok())
 }
 
 // checks if all of the input values are valid, and returns a vector of string errors
@@ -77,11 +75,11 @@ fn validate_state(state: &State) -> Vec<String> {
     }
 
     // check if fps field is a valid number
-    if !state.fps.parse::<u32>().is_ok() {
+    if state.fps.parse::<u32>().is_err() {
         errors.push(String::from("'fps' field is not a valid unsigned integer"))
     }
 
-    return errors
+    errors
 }
 
 impl State {
@@ -136,7 +134,7 @@ impl State {
                 
                 // convert the input file with the specified state
                 // ignores errors 
-                if let Err(_) = super::convert(self, path) {
+                if super::convert(self, path).is_err() {
                     return Task::none()
                 }
                 
