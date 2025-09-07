@@ -132,12 +132,12 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // get input video file command line argument, this can be None
-    let file: Option<String> = env::args().nth(1);
-
     // check if required programs are installed
     check_program("ffmpeg")?;
     check_program("ffprobe")?;
+
+    // get input video file command line argument, this can be None
+    let file: Option<String> = env::args().nth(1);
 
     // get length and FPS of video if the file argument exists
     let length: Option<String> = file.as_ref().map(|f| video_length(f)).transpose()?;
