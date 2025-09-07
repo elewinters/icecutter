@@ -80,14 +80,14 @@ fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 }
 
 // converts the video via fffmpeg
-// expects sanitized input
+// expects sanitized input (correct from/to timestamps, valid FPS, etc.)
 pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
+    // arg vec that we will push arguments into depending on the configuration
+    let mut arguments: Vec<&str> = Vec::new();
+
     // argument arrays
     let convert_720p = ["-vf", "scale=-1:720"];
     let cut = ["-ss", &state.from, "-to", &state.to];
-
-    // arg vec that we will push arguments into depending on the configuration
-    let mut arguments: Vec<&str> = Vec::new();
 
     // input file
     arguments.push("-i");
