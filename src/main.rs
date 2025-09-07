@@ -111,7 +111,7 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     arguments.push(output);
 
     // run command
-    let command = Command::new("ffmpeg")
+    Command::new("ffmpeg")
         .args(&arguments)
         .spawn()?;
 
