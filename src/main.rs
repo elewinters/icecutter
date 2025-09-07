@@ -85,22 +85,18 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
 
-    // argument arrays
-    let convert_720p = ["-vf", "scale=-1:720"];
-    let cut = ["-ss", &state.from, "-to", &state.to];
-
     // input file
     arguments.push("-i");
     arguments.push(&state.file);
 
     // cutting
     if !state.from.is_empty() && !state.to.is_empty() {
-        arguments.extend_from_slice(&cut);
+        arguments.extend_from_slice(&["-ss", &state.from, "-to", &state.to]);
     }
 
     // conversion to 720p
     if state.convert_720p {
-        arguments.extend_from_slice(&convert_720p);
+        arguments.extend_from_slice(&["-vf", "scale=-1:720"]);
     }
 
     // encode as h265
