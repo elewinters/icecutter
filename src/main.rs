@@ -82,32 +82,43 @@ fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 // converts the video via fffmpeg
 // expects sanitized input
 pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
-    // handle arguments
-    let convert_720p = vec!["-vf", "scale=-1:720"];
-    let cut = vec!["-ss", &state.from, "-to", &state.to];
+    // argument arrays
+    let convert_720p = ["-vf", "scale=-1:720"];
+    let cut = ["-ss", &state.from, "-to", &state.to];
 
+    // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
 
+    // input file
     arguments.push("-i");
     arguments.push(&state.file);
 
+    // cutting
     if !state.from.is_empty() && !state.to.is_empty() {
         arguments.extend_from_slice(&cut);
     }
 
+    // conversion to 720p
     if state.convert_720p {
         arguments.extend_from_slice(&convert_720p);
     }
 
+    // encode as h265
     arguments.push("-vcodec");
     arguments.push("libx265");
 
+    // set fps
     arguments.push("-r");
     arguments.push(&state.fps);
 
+    // set file size limit to 8M (setting this to 10M instead makes the output go above 10M sometimes, so we set this a bit lower to be more conservative) 
     arguments.push("-fs");
     arguments.push("8M");
 
+    // overwrite files
+    arguments.push("-y");
+
+    // output file name
     arguments.push(output);
 
     // run command
