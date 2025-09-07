@@ -128,7 +128,6 @@ impl State {
                 };
                 
                 if let Err(err) = super::convert(self, path) {
-                    println!("{err}");
                     return Task::none()
                 }
                 
