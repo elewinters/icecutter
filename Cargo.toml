@@ -6,3 +6,9 @@ edition = "2024"
 [dependencies]
 iced = "0.13.1"
 rfd = "0.15.4"
+
+# optimize for file size in the release
+[profile.release]
+opt-level = 's'
+lto = true
+codegen-units = 1
