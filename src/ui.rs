@@ -1,6 +1,7 @@
 use iced::*;
 use iced::widget::{*, column};
 
+#[derive(Default)]
 pub struct State {
     pub from: String,
     pub to: String,
@@ -8,22 +9,6 @@ pub struct State {
     pub file: String,
     pub fps: String,
     pub convert_720p: bool,
-
-    pub progress: f32,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            from: String::default(),
-            to: String::default(),
-
-            file: String::default(),
-            fps: String::default(),
-            convert_720p: false,
-            progress: 50.0
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
