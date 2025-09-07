@@ -24,6 +24,7 @@ pub enum Message {
     FileSelected(Option<rfd::FileHandle>),
 }
 
+// checks if the from/to timestamps are valid
 fn validate_timestamp(timestamp: &str) -> bool {
     // an empty timestamp is also valid
     if timestamp.is_empty() {
@@ -46,6 +47,8 @@ fn validate_timestamp(timestamp: &str) -> bool {
     }
 }
 
+// checks if all of the input values are valid, and returns a vector of string errors
+// if the state is valid, then an empty vector is returned
 fn validate_state(state: &State) -> Vec<String> {
     let mut errors = Vec::new();
 
@@ -105,6 +108,7 @@ impl State {
                 Task::none()
             }
 
+            // ran upon clicking the convert button
             Message::FileDialog => {
                 let file_name = format!("[converted] {}", &self.file);
                 Task::perform(async {
@@ -114,20 +118,25 @@ impl State {
                         .save_file()
                         .await
                     },
-                    Message::FileSelected
+                    Message::FileSelected // once the file dialog task is over, run this message
                 )
             }
 
+            // the file dialog task has finished, so now we run this
             Message::FileSelected(file) => {
+                // get filehandle if valid
                 let Some(output) = file else {
                     return Task::none() 
                 };
 
+                // convert filehandle to string, if possible
                 let Some(path) = output.path().to_str() else { 
                     return Task::none() 
                 };
                 
-                if let Err(err) = super::convert(self, path) {
+                // convert the input file with the specified state
+                // ignores errors 
+                if let Err(_) = super::convert(self, path) {
                     return Task::none()
                 }
                 
@@ -136,6 +145,7 @@ impl State {
         }
     }
 
+    // view responsible for showing error messages above the convert button
     fn error_view(&self) -> Element<'_, Message> {
         let errors = validate_state(self);
         
@@ -157,6 +167,7 @@ impl State {
         .into()
     }
 
+    // main view
     pub fn view(&self) -> Container<'_, Message> {
         center(
             column![
@@ -171,6 +182,7 @@ impl State {
                 ]
                 .spacing(5),
 
+                // separator
                 horizontal_rule(1),
 
                 // from:to textboxes
@@ -192,7 +204,7 @@ impl State {
                 )
                 .width(400),
                 
-                // fps, we set the width a bit lower
+                // fps
                 container(
                     text_input("fps", &self.fps)
                         .on_input(Message::ChangeFps),
