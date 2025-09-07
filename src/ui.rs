@@ -173,24 +173,6 @@ impl State {
         .into()
     }
 
-    fn progress_view(&self) -> Element<'_, Message> {
-        let condition = false;
-
-        if !condition {
-            return Space::new(0, 0).into();
-        }
-
-        column![
-            text("processing with ffmpeg..."),
-            progress_bar(0.0..=100.0, self.progress)
-                .height(15)
-        ]
-        .align_x(Center)
-        .padding(5)
-        .spacing(10)
-        .into()
-    }
-
     pub fn view(&self) -> Container<'_, Message> {
         center(
             column![
@@ -246,9 +228,6 @@ impl State {
                         true => Some(Message::FileDialog),
                         false => None
                     }),
-                
-                // progress bar
-                self.progress_view()
             ]
             .align_x(Center)
             .padding(25)
