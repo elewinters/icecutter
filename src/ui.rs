@@ -1,6 +1,8 @@
 use iced::*;
 use iced::widget::{*, column};
 
+use super::error::show_error_async;
+
 #[derive(Default)]
 pub struct State {
     pub from: String,
@@ -19,6 +21,8 @@ pub enum Message {
     ChangeFile(String),
     ChangeFps(String),
     ChangeConvert720p(bool),
+
+    Error,
 
     FileDialog,
     FileSelected(Option<rfd::FileHandle>),
@@ -106,6 +110,9 @@ impl State {
                 Task::none()
             }
 
+            // dummy message
+            Message::Error => Task::none(),
+
             // ran upon clicking the convert button
             Message::FileDialog => {
                 let file_name = format!("[converted] {}", &self.file);
@@ -123,19 +130,19 @@ impl State {
             // the file dialog task has finished, so now we run this
             Message::FileSelected(file) => {
                 // get filehandle if valid
+                // cancelling the file dialog isnt exactly an error so show_error isnt called
                 let Some(output) = file else {
-                    return Task::none() 
+                    return Task::none(); 
                 };
 
                 // convert filehandle to string, if possible
                 let Some(path) = output.path().to_str() else { 
-                    return Task::none() 
+                    return Task::perform(show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"), |_| Message::Error);
                 };
                 
                 // convert the input file with the specified state
-                // ignores errors 
-                if super::convert(self, path).is_err() {
-                    return Task::none()
+                if let Err(err) = super::convert(self, path) {
+                    return Task::perform(show_error_async(err.to_string()), |_| Message::Error);
                 }
                 
                 Task::none()

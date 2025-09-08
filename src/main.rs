@@ -3,7 +3,12 @@ use std::env;
 use std::error::Error;
 use std::process::{Command, Stdio};
 
+use std::process::exit;
+
 mod ui;
+mod error;
+
+use error::show_error;
 
 // check if specified program is properly installed on the system
 fn check_program(program: &str) -> Result<(), String> {
@@ -127,20 +132,34 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     // check if required programs are installed
-    check_program("ffmpeg")?;
-    check_program("ffprobe")?;
+    if let Err(err) = check_program("ffmpeg") {
+        show_error(err);
+        exit(1);
+    }
+
+    if let Err(err) = check_program("ffprobe") {
+        show_error(err);
+        exit(1);
+    }
 
     // get input video file command line argument, this can be None
     let file: Option<String> = env::args().nth(1);
 
     // get length and FPS of video if the file argument exists
-    let length: Option<String> = file.as_ref().map(|f| video_length(f)).transpose()?;
-    let fps: Option<String> = file.as_ref().map(|f| video_fps(f)).transpose()?;
+    let length: Option<String> = file.as_ref().map(|f| video_length(f)).transpose().unwrap_or_else(|err| {
+        show_error(format!("failed to get video length: {err}"));
+        None
+    });
+
+    let fps: Option<String> = file.as_ref().map(|f| video_fps(f)).transpose().unwrap_or_else(|err| {
+        show_error(format!("failed to get video fps: {err}"));
+        None 
+    });
 
     // run iced application with custom initial state
-    iced::application("icecutter", ui::State::update, ui::State::view)
+    let result = iced::application("icecutter", ui::State::update, ui::State::view)
         .window(iced::window::Settings {
             size: (640.0, 480.0).into(),
             resizable: false,
@@ -159,7 +178,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 },
                 iced::Task::none()
             )
-        })?;
+        });
     
-    Ok(())
+    if let Err(err) = result {
+        show_error(format!("failed to initialize iced, something must've went very wrong: {err}"));
+    }
 }
