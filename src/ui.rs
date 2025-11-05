@@ -1,7 +1,8 @@
 use iced::*;
 use iced::widget::{*, column};
 
-use super::error::show_error_async;
+use crate::error;
+use crate::ffmpeg;
 
 #[derive(Default)]
 pub struct State {
@@ -11,6 +12,9 @@ pub struct State {
     pub file: String,
     pub fps: String,
     pub convert_720p: bool,
+
+    pub ffmpeg_installed: bool,
+    pub ffprobe_installed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +92,8 @@ fn validate_state(state: &State) -> Vec<String> {
 
 impl State {
     pub fn update(&mut self, message: Message) -> Task<Message> {
+        println!("{}, {}", self.ffmpeg_installed, self.ffprobe_installed);
+
         match message {
             Message::ChangeFrom(from) => {
                 self.from = from;
@@ -137,12 +143,12 @@ impl State {
 
                 // convert filehandle to string, if possible
                 let Some(path) = output.path().to_str() else { 
-                    return Task::perform(show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"), |_| Message::Error);
+                    return Task::perform(error::show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"), |_| Message::Error);
                 };
                 
                 // convert the input file with the specified state
-                if let Err(err) = super::convert(self, path) {
-                    return Task::perform(show_error_async(err.to_string()), |_| Message::Error);
+                if let Err(err) = ffmpeg::convert(self, path) {
+                    return Task::perform(error::show_error_async(err.to_string()), |_| Message::Error);
                 }
                 
                 Task::none()
