@@ -77,11 +77,16 @@ fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
         return Err(format!("ffprobe command failed, is the input file '{video}' valid?").into());
     }
 
-    // get output from command and split by / so we only get the actual fps
+    // get output from command
     let output = String::from_utf8(output.stdout)?;
     let output: Vec<&str> = output.split('/').collect();
 
-    Ok(String::from(output[0]))
+    // get the first number and the second number
+    let x = output[0].trim().parse::<f32>()?;
+    let y = output[1].trim().parse::<f32>()?;
+
+    // divide the two numbers together, giving us the FPS
+    Ok((x / y).round().to_string())
 }
 
 // converts the video via fffmpeg
