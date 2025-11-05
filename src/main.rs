@@ -5,20 +5,16 @@ mod error;
 mod ffmpeg;
 
 fn main() {
-    // check if ffmpeg/ffprobe are installed
-    let ffmpeg_installed = ffmpeg::check_program("ffmpeg").is_ok();
-    let ffprobe_installed = ffmpeg::check_program("ffprobe").is_ok();
-
     // get input video file command line argument, this can be None
     let file: Option<String> = env::args().nth(1);
 
     // get length and FPS of video if the file argument exists
-    let length: Option<String> = file.as_ref().map(|f| ffmpeg::video_length(f, ffprobe_installed)).transpose().unwrap_or_else(|err| {
+    let length: Option<String> = file.as_ref().map(|f| ffmpeg::video_length(f)).transpose().unwrap_or_else(|err| {
         error::show_error(format!("failed to get video length: {err}"));
         None
     });
 
-    let fps: Option<String> = file.as_ref().map(|f| ffmpeg::video_fps(f, ffprobe_installed)).transpose().unwrap_or_else(|err| {
+    let fps: Option<String> = file.as_ref().map(|f| ffmpeg::video_fps(f)).transpose().unwrap_or_else(|err| {
         error::show_error(format!("failed to get video fps: {err}"));
         None 
     });
@@ -38,9 +34,6 @@ fn main() {
 
                 file: file.unwrap_or_default(),
                 fps: fps.unwrap_or_default(),
-
-                ffmpeg_installed: ffmpeg_installed,
-                ffprobe_installed: ffprobe_installed,
 
                 ..Default::default()
             },

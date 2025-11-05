@@ -12,9 +12,6 @@ pub struct State {
     pub file: String,
     pub fps: String,
     pub convert_720p: bool,
-
-    pub ffmpeg_installed: bool,
-    pub ffprobe_installed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -92,8 +89,6 @@ fn validate_state(state: &State) -> Vec<String> {
 
 impl State {
     pub fn update(&mut self, message: Message) -> Task<Message> {
-        println!("{}, {}", self.ffmpeg_installed, self.ffprobe_installed);
-
         match message {
             Message::ChangeFrom(from) => {
                 self.from = from;
@@ -180,65 +175,80 @@ impl State {
 
     // main view
     pub fn view(&self) -> Container<'_, Message> {
-        center(
-            column![
-                // text column
+        container(column![
+            center(
                 column![
-                    text("icecutter")
-                        .size(30),
-                    text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
-                        .center(),
-                    text("primarly built for quickly cutting and compressing clips to upload to discord")
-                        .size(12)
-                ]
-                .spacing(5),
+                    // text column
+                    column![
+                        text("icecutter")
+                            .size(30),
+                        text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
+                            .center(),
+                        text("primarly built for quickly cutting and compressing clips to upload to discord")
+                            .size(12)
+                    ]
+                    .spacing(5),
 
-                // separator
-                horizontal_rule(1),
+                    // separator
+                    horizontal_rule(1),
 
-                // from:to textboxes
-                row![
-                    text_input("from", &self.from)
-                        .on_input(Message::ChangeFrom),
-                    text("-")
-                        .size(20),
-                    text_input("to", &self.to)
-                        .on_input(Message::ChangeTo),
+                    // from:to textboxes
+                    row![
+                        text_input("from", &self.from)
+                            .on_input(Message::ChangeFrom),
+                        text("-")
+                            .size(20),
+                        text_input("to", &self.to)
+                            .on_input(Message::ChangeTo),
+                    ]
+                    .spacing(10)
+                    .width(150),
+                    
+                    // input file
+                    container(
+                        text_input("input file", &self.file)
+                            .on_input(Message::ChangeFile),
+                    )
+                    .width(400),
+                    
+                    // fps
+                    container(
+                        text_input("fps", &self.fps)
+                            .on_input(Message::ChangeFps),
+                    )
+                    .width(75),
+                    
+                    // 720p checkbox
+                    checkbox("convert to 720p", self.convert_720p)
+                        .on_toggle(Message::ChangeConvert720p),
+
+                    // errors
+                    self.error_view(),
+
+                    // convert button
+                    button("convert")
+                        .on_press_maybe(match validate_state(self).is_empty() {
+                            true => Some(Message::FileDialog),
+                            false => None
+                        }),
                 ]
+                .align_x(Center)
+                .padding(25)
                 .spacing(10)
-                .width(150),
-                
-                // input file
-                container(
-                    text_input("input file", &self.file)
-                        .on_input(Message::ChangeFile),
-                )
-                .width(400),
-                
-                // fps
-                container(
-                    text_input("fps", &self.fps)
-                        .on_input(Message::ChangeFps),
-                )
-                .width(75),
-                
-                // 720p checkbox
-                checkbox("convert to 720p", self.convert_720p)
-                    .on_toggle(Message::ChangeConvert720p),
+            ),
 
-                // errors
-                self.error_view(),
+            // ffmpeg/ffprobe stuff at the bottom left
+            row![
+                Space::new(10, 0),
+                container(text("ffmpeg version: ".to_owned() + &ffmpeg::program_version("ffmpeg")).size(11)).padding(2),
+            ],
 
-                // convert button
-                button("convert")
-                    .on_press_maybe(match validate_state(self).is_empty() {
-                        true => Some(Message::FileDialog),
-                        false => None
-                    }),
-            ]
-            .align_x(Center)
-            .padding(25)
-            .spacing(10)
-        )
+             row![
+                Space::new(10, 0),
+                container(text("ffprobe version: ".to_owned() + &ffmpeg::program_version("ffprobe")).size(11)).padding(2),
+            ],
+
+            Space::new(0, 5)
+        ])
     }
 }

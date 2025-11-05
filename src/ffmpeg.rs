@@ -1,15 +1,13 @@
 use std::error::Error;
-use std::process::{Command, Stdio};
+use std::process::{Command};
+
 use std::env;
+use std::process::exit;
 
 use crate::ui;
+use crate::error;
 
-fn program_path(program: &str, installed: bool) -> String {
-    // if ffmpeg is installed we just return "ffmpeg"
-    if installed {
-        return String::from(program);
-    }
-
+fn program_path(program: &str) -> String {
     // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
     let mut exe_dir = env::current_exe().unwrap();
     exe_dir.pop();
@@ -22,29 +20,30 @@ fn program_path(program: &str, installed: bool) -> String {
         exe_dir.push(program);
     }
 
+    if !exe_dir.exists() {
+        error::show_error(format!("failed to find \"{}\", are you sure it's in the same directory as icecutter?", exe_dir.display()));
+        exit(1);
+    }
+
     return exe_dir.to_str().unwrap().to_string();
 }
 
-// check if specified program is properly installed on the system
-pub fn check_program(program: &str) -> Result<(), String> {
-    let command = Command::new(program)
+pub fn program_version(program: &str) -> String {
+    let command = Command::new(program_path(program))
         .arg("-version")
-        .stdout(Stdio::null()) // dont print ffmpeg/ffprobe output to console
-        .status();
-    
-    let err = Err(format!("failed to detect {program} on this system, are you sure it's been installed correctly?"));
+        .output()
+        .unwrap();
 
-    match command {
-        Ok(status) if !status.success() => err,
-        Err(_) => err,
-        _ => Ok(())
-    }
+    let output = String::from_utf8(command.stdout).unwrap();
+    let output: Vec<&str> = output.split(' ').collect();
+
+    return output[2].to_string();
 }
 
 // returns the length of the video in MM:SS format
-pub fn video_length(video: &str, ffprobe_installed: bool) -> Result<String, Box<dyn Error>> {
+pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
-    let output = Command::new(program_path("ffprobe", ffprobe_installed))
+    let output = Command::new(program_path("ffprobe"))
         .arg("-i")
         .arg(video)
         .arg("-show_entries")
@@ -72,9 +71,9 @@ pub fn video_length(video: &str, ffprobe_installed: bool) -> Result<String, Box<
 }
 
 // returns the FPS of the video
-pub fn video_fps(video: &str, ffprobe_installed: bool) -> Result<String, Box<dyn Error>> {
+pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get FPS in FPS/1 format
-    let output = Command::new(program_path("ffprobe", ffprobe_installed))
+    let output = Command::new(program_path("ffprobe"))
         .arg("-i")
         .arg(video)
         .arg("-select_streams")
@@ -143,7 +142,7 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     arguments.push(output);
 
     // run command
-    Command::new(program_path("ffmpeg", state.ffmpeg_installed))
+    Command::new(program_path("ffmpeg"))
         .args(&arguments)
         .spawn()?;
 
