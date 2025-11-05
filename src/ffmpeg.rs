@@ -1,7 +1,29 @@
 use std::error::Error;
 use std::process::{Command, Stdio};
+use std::env;
 
 use crate::ui;
+
+fn program_path(program: &str, installed: bool) -> String {
+    // if ffmpeg is installed we just return "ffmpeg"
+    if installed {
+        return String::from(program);
+    }
+
+    // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
+    let mut exe_dir = env::current_exe().unwrap();
+    exe_dir.pop();
+
+    // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
+    if cfg!(windows) {
+        exe_dir.push(program.to_string() + ".exe");
+    }
+    else {
+        exe_dir.push(program);
+    }
+
+    return exe_dir.to_str().unwrap().to_string();
+}
 
 // check if specified program is properly installed on the system
 pub fn check_program(program: &str) -> Result<(), String> {
@@ -20,9 +42,9 @@ pub fn check_program(program: &str) -> Result<(), String> {
 }
 
 // returns the length of the video in MM:SS format
-pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
+pub fn video_length(video: &str, ffprobe_installed: bool) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
-    let output = Command::new("ffprobe")
+    let output = Command::new(program_path("ffprobe", ffprobe_installed))
         .arg("-i")
         .arg(video)
         .arg("-show_entries")
@@ -50,9 +72,9 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 }
 
 // returns the FPS of the video
-pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
+pub fn video_fps(video: &str, ffprobe_installed: bool) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get FPS in FPS/1 format
-    let output = Command::new("ffprobe")
+    let output = Command::new(program_path("ffprobe", ffprobe_installed))
         .arg("-i")
         .arg(video)
         .arg("-select_streams")
@@ -121,7 +143,7 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     arguments.push(output);
 
     // run command
-    Command::new("ffmpeg")
+    Command::new(program_path("ffmpeg", state.ffmpeg_installed))
         .args(&arguments)
         .spawn()?;
 
