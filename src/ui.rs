@@ -180,7 +180,12 @@ impl State {
 
             // ran upon clicking the convert button
             Message::ConvertFileDialog => {
-                let file_name = format!("[converted] {}", &self.file);
+                let file_name = match Path::new(&self.file).file_name() {
+                    Some(x) => x.to_str().unwrap(),
+                    None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::Error)
+                };
+                let file_name = format!("[converted] {}", file_name);
+
                 Task::perform(async {
                     rfd::AsyncFileDialog::new()
                         .set_title("save converted video")
