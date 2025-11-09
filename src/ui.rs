@@ -205,11 +205,15 @@ impl State {
                     .width(150),
                     
                     // input file
-                    container(
-                        text_input("input file", &self.file)
-                            .on_input(Message::ChangeFile),
-                    )
-                    .width(400),
+                    row![
+                        button("select"),
+                        Space::new(10, 0),
+                        container(
+                            text_input("input file", &self.file)
+                                .on_input(Message::ChangeFile),
+                        )
+                        .width(300),
+                    ],
                     
                     // fps
                     container(
