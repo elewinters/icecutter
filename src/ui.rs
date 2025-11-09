@@ -180,7 +180,7 @@ impl State {
                 column![
                     // text column
                     column![
-                        text("icecutter")
+                        text("icecutter v1.2.0")
                             .size(30),
                         text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
                             .center(),
@@ -237,15 +237,10 @@ impl State {
                 .spacing(10)
             ),
 
-            // ffmpeg/ffprobe stuff at the bottom left
+            // ffmpeg version at the bottom left
             row![
                 Space::new(10, 0),
                 container(text("ffmpeg version: ".to_owned() + &ffmpeg::program_version("ffmpeg")).size(11)).padding(2),
-            ],
-
-             row![
-                Space::new(10, 0),
-                container(text("ffprobe version: ".to_owned() + &ffmpeg::program_version("ffprobe")).size(11)).padding(2),
             ],
 
             Space::new(0, 5)
