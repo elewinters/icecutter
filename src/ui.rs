@@ -1,3 +1,6 @@
+use std::path::Path;
+use std::result::Result;
+
 use iced::*;
 use iced::widget::{*, column};
 
@@ -25,8 +28,38 @@ pub enum Message {
 
     Error,
 
-    FileDialog,
-    FileSelected(Option<rfd::FileHandle>),
+    SelectFileDialog,
+    SelectFileSelected(Option<rfd::FileHandle>),
+
+    ConvertFileDialog,
+    ConvertFileSelected(Option<rfd::FileHandle>),
+}
+
+// initializes the state from a video file
+pub fn initialize_state(file: &str) -> Result<State, String> {
+    if !Path::new(file).exists() {
+        return Err(format!("file \"{file}\" does not exist"))
+    }
+
+    let length = match ffmpeg::video_length(file) {
+        Ok(x) => x,
+        Err(err) => return Err(format!("failed to get video length: {err}").into())
+    };
+
+    let fps = match ffmpeg::video_fps(file) {
+        Ok(x) => x,
+        Err(err) => return Err(format!("failed to get video fps: {err}"))
+    };
+
+    Ok(State {
+        from: String::from("00:00"),
+        to: length,
+
+        file: file.to_string(),
+        fps: fps,
+
+        ..Default::default()
+    })
 }
 
 // checks if the from/to timestamps are valid
@@ -114,8 +147,39 @@ impl State {
             // dummy message
             Message::Error => Task::none(),
 
+            // ran upon clicking the select button
+            Message::SelectFileDialog => {
+                Task::perform(async {
+                    rfd::AsyncFileDialog::new()
+                        .set_title("select video to convert")
+                        .pick_file()
+                        .await
+                    },
+                    Message::SelectFileSelected // once the file dialog task is over, run this message
+                )
+            }
+
+            Message::SelectFileSelected(file_opt) => {
+                let Some(file) = file_opt else {
+                    return Task::none()
+                };
+
+                let file_path = match file.path().to_str() {
+                    Some(x) => x,
+                    None => return Task::perform(error::show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"),  |_| Message::Error)
+                };
+
+                let state = match initialize_state(file_path) {
+                    Ok(state) => state,
+                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
+                };
+
+                *self = state;
+                Task::none()
+            }
+
             // ran upon clicking the convert button
-            Message::FileDialog => {
+            Message::ConvertFileDialog => {
                 let file_name = format!("[converted] {}", &self.file);
                 Task::perform(async {
                     rfd::AsyncFileDialog::new()
@@ -124,12 +188,12 @@ impl State {
                         .save_file()
                         .await
                     },
-                    Message::FileSelected // once the file dialog task is over, run this message
+                    Message::ConvertFileSelected // once the file dialog task is over, run this message
                 )
             }
 
             // the file dialog task has finished, so now we run this
-            Message::FileSelected(file) => {
+            Message::ConvertFileSelected(file) => {
                 // get filehandle if valid
                 // cancelling the file dialog isnt exactly an error so show_error isnt called
                 let Some(output) = file else {
@@ -206,7 +270,8 @@ impl State {
                     
                     // input file
                     row![
-                        button("select"),
+                        button("select")
+                            .on_press(Message::SelectFileDialog),
                         Space::new(10, 0),
                         container(
                             text_input("input file", &self.file)
@@ -232,7 +297,7 @@ impl State {
                     // convert button
                     button("convert")
                         .on_press_maybe(match validate_state(self).is_empty() {
-                            true => Some(Message::FileDialog),
+                            true => Some(Message::ConvertFileDialog),
                             false => None
                         }),
                 ]
