@@ -117,6 +117,11 @@ fn validate_state(state: &State) -> Vec<String> {
         errors.push(String::from("'fps' field is not a valid unsigned integer"))
     }
 
+    // check if file exists
+    if !state.file.is_empty() && !Path::new(&state.file).exists() {
+        errors.push(String::from("input file does not exist"));
+    }
+
     errors
 }
 
