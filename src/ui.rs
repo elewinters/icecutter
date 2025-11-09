@@ -186,10 +186,13 @@ impl State {
                 };
                 let file_name = format!("[converted] {}", file_name);
 
-                Task::perform(async {
+                let directory = Path::new(&self.file).parent().unwrap().to_path_buf();
+
+                Task::perform(async move {
                     rfd::AsyncFileDialog::new()
                         .set_title("save converted video")
                         .set_file_name(file_name)
+                        .set_directory(directory.as_path())
                         .save_file()
                         .await
                     },
