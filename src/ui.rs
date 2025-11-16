@@ -184,6 +184,13 @@ impl State {
             Message::ConvertFileDialog => {
                 let path = Path::new(&self.file);
 
+                // check if input file is a valid video
+                // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
+                // in which case if the user inputted a non-video into that field, ffmpeg would error out
+                if let Err(err) = initialize_state(&path.to_string_lossy()) {
+                    return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::Error);
+                }
+
                 // get the directory of the file
                 let directory = match path.parent() {
                     Some(path) => path.to_path_buf(),
