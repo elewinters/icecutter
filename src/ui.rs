@@ -41,15 +41,11 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
         return Err(format!("file \"{file}\" does not exist"))
     }
 
-    let length = match ffmpeg::video_length(file) {
-        Ok(x) => x,
-        Err(err) => return Err(format!("failed to get video length: {err}"))
-    };
+    let length = ffmpeg::video_length(file)
+        .map_err(|err| format!("failed to get video length: {err}"))?;
 
-    let fps = match ffmpeg::video_fps(file) {
-        Ok(x) => x,
-        Err(err) => return Err(format!("failed to get video fps: {err}"))
-    };
+    let fps = ffmpeg::video_fps(file)
+        .map_err(|err| format!("failed to get video fps: {err}"))?;
 
     Ok(State {
         from: String::from("00:00"),
