@@ -43,7 +43,7 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
 
     let length = match ffmpeg::video_length(file) {
         Ok(x) => x,
-        Err(err) => return Err(format!("failed to get video length: {err}").into())
+        Err(err) => return Err(format!("failed to get video length: {err}"))
     };
 
     let fps = match ffmpeg::video_fps(file) {
@@ -56,7 +56,7 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
         to: length,
 
         file: file.to_string(),
-        fps: fps,
+        fps,
 
         ..Default::default()
     })

@@ -25,7 +25,7 @@ fn program_path(program: &str) -> String {
         exit(1);
     }
 
-    return exe_dir.to_str().unwrap().to_string();
+    exe_dir.to_str().unwrap().to_string()
 }
 
 pub fn program_version(program: &str) -> String {
@@ -37,7 +37,7 @@ pub fn program_version(program: &str) -> String {
     let output = String::from_utf8(command.stdout).unwrap();
     let output: Vec<&str> = output.split(' ').collect();
 
-    return output[2].to_string();
+    output[2].to_string()
 }
 
 // returns the length of the video in MM:SS format
