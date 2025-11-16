@@ -48,7 +48,7 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
         .map_err(|err| format!("failed to get video fps: {err}"))?;
 
     Ok(State {
-        from: String::from("00:00"),
+        from: "00:00".to_owned(),
         to: length,
 
         file: file.to_string(),
@@ -86,36 +86,36 @@ fn validate_state(state: &State) -> Vec<String> {
 
     // check if only one of the timestamps is filled and throw an error
     if state.to.is_empty() && !state.from.is_empty() {
-        errors.push(String::from("'to' timestamp is empty, while the 'from' timestamp is not"));
+        errors.push("'to' timestamp is empty, while the 'from' timestamp is not".to_owned());
     }
 
     if state.from.is_empty() && !state.to.is_empty() {
-        errors.push(String::from("'from' timestamp is empty, while the 'to' timestamp is not"));
+        errors.push("'from' timestamp is empty, while the 'to' timestamp is not".to_owned());
     }
 
     // check if both timestamps are in the proper format
     // if one of these is empty it will also return true
     if !validate_timestamp(&state.from) {
-        errors.push(String::from("'from' timestamp is not in a valid MM:SS format"));
+        errors.push("'from' timestamp is not in a valid MM:SS format".to_owned());
     }
 
     if !validate_timestamp(&state.to) {
-        errors.push(String::from("'to' timestamp is not in a valid MM:SS format"));
+        errors.push("'to' timestamp is not in a valid MM:SS format".to_owned());
     }
 
     // check if input file field is empty
     if state.file.is_empty() {
-        errors.push(String::from("'input file' field is empty"));
+        errors.push("'input file' field is empty".to_owned());
     }
 
     // check if fps field is a valid number
     if state.fps.parse::<u32>().is_err() {
-        errors.push(String::from("'fps' field is not a valid unsigned integer"))
+        errors.push("'fps' field is not a valid unsigned integer".to_owned())
     }
 
     // check if file exists
     if !state.file.is_empty() && !Path::new(&state.file).exists() {
-        errors.push(String::from("input file does not exist"));
+        errors.push("input file does not exist".to_owned());
     }
 
     errors
