@@ -7,14 +7,15 @@ use std::process::exit;
 use crate::ui;
 use crate::error;
 
+// returns the path of either ffmpeg or ffprobe
 fn program_path(program: &str) -> String {
     // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
-    let mut exe_dir = env::current_exe().unwrap();
+    let mut exe_dir = env::current_exe().expect("could not get path of the current executable");
     exe_dir.pop();
 
     // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
     if cfg!(windows) {
-        exe_dir.push(program.to_string() + ".exe");
+        exe_dir.push(program.to_owned() + ".exe");
     }
     else {
         exe_dir.push(program);
@@ -25,19 +26,21 @@ fn program_path(program: &str) -> String {
         exit(1);
     }
 
-    exe_dir.to_str().unwrap().to_string()
+    exe_dir.to_string_lossy().to_string()
 }
 
+// returns the ffmpeg version
+// this can theoretically panic however by the time this function is called we've already established that we have a valid ffmpeg/ffprobe installation
 pub fn program_version(program: &str) -> String {
     let command = Command::new(program_path(program))
         .arg("-version")
         .output()
-        .unwrap();
+        .expect("ffmpeg/ffprobe has to be valid and installed correctly");
 
-    let output = String::from_utf8(command.stdout).unwrap();
+    let output = String::from_utf8(command.stdout).expect("output has to be valid utf8");
     let output: Vec<&str> = output.split(' ').collect();
 
-    output[2].to_string()
+    output[2].to_owned()
 }
 
 // returns the length of the video in MM:SS format
