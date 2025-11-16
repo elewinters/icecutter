@@ -171,8 +171,9 @@ impl State {
                 let path = file.path().to_string_lossy();
 
                 // initialize state based on selected file
-                let Ok(state) = initialize_state(&path) else {
-                    return Task::perform(error::show_error_async("failed to initialize state"), |_| Message::Error)
+                let state = match initialize_state(&path) {
+                    Ok(x) => x,
+                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
                 };
 
                 *self = state;

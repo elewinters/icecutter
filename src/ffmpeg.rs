@@ -78,6 +78,10 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     let output = String::from_utf8(output.stdout)?;
     let output: Vec<&str> = output.split(&[':', '.']).collect();
 
+    if output.len() < 3 {
+        return Err(format!("failed to get duration of video, is the input file '{video}' valid?").into());
+    }
+
     let minutes = &output[1];
     let seconds = &output[2];
 
