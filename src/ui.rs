@@ -160,19 +160,19 @@ impl State {
                 )
             }
 
+            // ran when the select file dialog has finished
             Message::SelectFileSelected(file_opt) => {
+                // verify if file dialog succeeded
                 let Some(file) = file_opt else {
                     return Task::none()
                 };
 
-                let file_path = match file.path().to_str() {
-                    Some(x) => x,
-                    None => return Task::perform(error::show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"),  |_| Message::Error)
-                };
+                // get the selected file path
+                let path = file.path().to_string_lossy();
 
-                let state = match initialize_state(file_path) {
-                    Ok(state) => state,
-                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
+                // initialize state based on selected file
+                let Ok(state) = initialize_state(&path) else {
+                    return Task::perform(error::show_error_async("failed to initialize state"), |_| Message::Error)
                 };
 
                 *self = state;
@@ -181,13 +181,19 @@ impl State {
 
             // ran upon clicking the convert button
             Message::ConvertFileDialog => {
-                let file_name = match Path::new(&self.file).file_name() {
-                    Some(x) => x.to_str().unwrap(),
+                let path = Path::new(&self.file);
+
+                // get the directory of the file
+                let directory = match path.parent() {
+                    Some(path) => path.to_path_buf(),
+                    None => return Task::perform(error::show_error_async("invalid input file, failed to get parent directory from path"), |_| Message::Error)
+                };
+
+                // get the file name of the file
+                let file_name = match path.file_name() {
+                    Some(x) => format!("[converted] {}", x.to_string_lossy()),
                     None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::Error)
                 };
-                let file_name = format!("[converted] {}", file_name);
-
-                let directory = Path::new(&self.file).parent().unwrap().to_path_buf();
 
                 Task::perform(async move {
                     rfd::AsyncFileDialog::new()
@@ -201,21 +207,19 @@ impl State {
                 )
             }
 
-            // the file dialog task has finished, so now we run this
-            Message::ConvertFileSelected(file) => {
+            // ran when the convert file dialog has finished
+            Message::ConvertFileSelected(file_opt) => {
                 // get filehandle if valid
                 // cancelling the file dialog isnt exactly an error so show_error isnt called
-                let Some(output) = file else {
+                let Some(file) = file_opt else {
                     return Task::none(); 
                 };
 
-                // convert filehandle to string, if possible
-                let Some(path) = output.path().to_str() else { 
-                    return Task::perform(error::show_error_async("failed to convert file path to a string, are you sure the file you selected is valid unicode?"), |_| Message::Error);
-                };
+                // get the selected file path
+                let path = file.path().to_string_lossy();
                 
                 // convert the input file with the specified state
-                if let Err(err) = ffmpeg::convert(self, path) {
+                if let Err(err) = ffmpeg::convert(self, &path) {
                     return Task::perform(error::show_error_async(err.to_string()), |_| Message::Error);
                 }
                 
