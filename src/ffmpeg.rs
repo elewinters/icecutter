@@ -7,31 +7,42 @@ use std::process::exit;
 use crate::ui;
 use crate::error;
 
+pub enum Program {
+    Ffmpeg,
+    Ffprobe
+}
+
 // returns the path of either ffmpeg or ffprobe
-fn program_path(program: &str) -> String {
+fn program_path(program: Program) -> String {
     // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
-    let mut exe_dir = env::current_exe().expect("could not get path of the current executable");
-    exe_dir.pop();
+    let mut path = env::current_exe().expect("could not get path of the current executable");
+    path.pop();
+
+    // convert program enum to program string
+    let program_str = match program {
+        Program::Ffmpeg => "ffmpeg".to_owned(),
+        Program::Ffprobe => "ffprobe".to_owned()
+    };
 
     // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
     if cfg!(windows) {
-        exe_dir.push(program.to_owned() + ".exe");
+        path.push(program_str + ".exe");
     }
     else {
-        exe_dir.push(program);
+        path.push(program_str);
     }
 
-    if !exe_dir.exists() {
-        error::show_error(format!("failed to find \"{}\", are you sure it's in the same directory as icecutter?", exe_dir.display()));
+    if !path.exists() {
+        error::show_error(format!("failed to find \"{}\", are you sure it's in the same directory as icecutter?", path.display()));
         exit(1);
     }
 
-    exe_dir.to_string_lossy().to_string()
+    path.to_string_lossy().to_string()
 }
 
 // returns the ffmpeg version
 // this can theoretically panic however by the time this function is called we've already established that we have a valid ffmpeg/ffprobe installation
-pub fn program_version(program: &str) -> String {
+pub fn program_version(program: Program) -> String {
     let command = Command::new(program_path(program))
         .arg("-version")
         .output()
@@ -46,7 +57,7 @@ pub fn program_version(program: &str) -> String {
 // returns the length of the video in MM:SS format
 pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
-    let output = Command::new(program_path("ffprobe"))
+    let output = Command::new(program_path(Program::Ffprobe))
         .arg("-i")
         .arg(video)
         .arg("-show_entries")
@@ -76,7 +87,7 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 // returns the FPS of the video
 pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get FPS in FPS/1 format
-    let output = Command::new(program_path("ffprobe"))
+    let output = Command::new(program_path(Program::Ffprobe))
         .arg("-i")
         .arg(video)
         .arg("-select_streams")
@@ -145,7 +156,7 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     arguments.push(output);
 
     // run command
-    Command::new(program_path("ffmpeg"))
+    Command::new(program_path(Program::Ffmpeg))
         .args(&arguments)
         .spawn()?;
 

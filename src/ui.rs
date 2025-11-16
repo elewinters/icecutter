@@ -323,7 +323,7 @@ impl State {
             row![
                 Space::new(10, 0),
                 container(
-                    text("ffmpeg version: ".to_owned() + &ffmpeg::program_version("ffmpeg"))
+                    text("ffmpeg version: ".to_owned() + &ffmpeg::program_version(ffmpeg::Program::Ffmpeg))
                         .size(11)
                 ).padding(2),
             ],
