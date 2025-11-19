@@ -40,6 +40,41 @@ fn program_path(program: Program) -> String {
     path.to_string_lossy().to_string()
 }
 
+// specifically check if input file is a video file and not an audio file
+// this will return "true" for non-audio files like text files and executables and what not
+// but other checks will make sure that the input file is a valid video file through fps/length checks
+pub fn is_video(video: &str) -> bool {
+    let output = Command::new(program_path(Program::Ffprobe))
+        .arg("-i")
+        .arg(video)
+        .arg("-show_entries")
+        .arg("stream=codec_type")
+        .arg("-v")
+        .arg("quiet")
+        .arg("-of")
+        .arg("csv=p=0")
+        .output();
+
+    let output = match output {
+        Ok(x) => x,
+        Err(_) => return false
+    };
+
+    let output = String::from_utf8(output.stdout).expect("output has to be valid utf8");
+    let output: Vec<&str> = output.split('\n').collect();
+
+    let text = match output.first() {
+        Some(x) => x,
+        None => return false
+    };
+
+    if text.trim() == "video" {
+        return true;
+    }
+
+    return false;
+}
+
 // returns the ffmpeg version
 // this can theoretically panic however by the time this function is called we've already established that we have a valid ffmpeg/ffprobe installation
 pub fn program_version(program: Program) -> String {

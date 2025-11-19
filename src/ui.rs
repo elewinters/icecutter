@@ -47,6 +47,10 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
     let fps = ffmpeg::video_fps(file)
         .map_err(|err| format!("failed to get video fps: {err}"))?;
 
+    if !ffmpeg::is_video(file) {
+        return Err("input file does not contain a valid video stream".to_owned());
+    }
+
     Ok(State {
         from: "00:00".to_owned(),
         to: length,
