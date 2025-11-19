@@ -72,7 +72,7 @@ pub fn is_video(video: &str) -> bool {
         return true;
     }
 
-    return false;
+    false
 }
 
 // returns the ffmpeg version
