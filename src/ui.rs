@@ -1,3 +1,4 @@
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::result::Result;
 
@@ -12,7 +13,7 @@ use iced::widget::{*, column};
 use crate::error;
 use crate::ffmpeg;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct State {
     pub from: String,
     pub to: String,
@@ -25,7 +26,7 @@ pub struct State {
 }
 
 pub enum SubscriptionInput {
-    Start
+    Start(State)
 }
 
 #[derive(Debug, Clone)]
@@ -167,9 +168,7 @@ impl State {
             }
             Message::ChangeFile(file) => {
                 self.file = file;
-                
-                let mut sender = self.channel_sender.clone().unwrap();
-                Task::perform(async move { sender.send(SubscriptionInput::Start).await }, |_| Message::Error)
+                Task::none()
             }
             Message::ChangeFps(fps) => {
                 self.fps = fps;
@@ -262,11 +261,14 @@ impl State {
                 let path = file.path().to_string_lossy();
                 
                 // convert the input file with the specified state
-                if let Err(err) = ffmpeg::convert(self, &path) {
-                    return Task::perform(error::show_error_async(err.to_string()), |_| Message::Error);
-                }
+                //if let Err(err) = ffmpeg::convert(self, &path) {
+                //    return Task::perform(error::show_error_async(err.to_string()), |_| Message::Error);
+                //}
                 
-                Task::none()
+                let mut sender = self.channel_sender.clone().unwrap();
+                let state = self.clone();
+
+                Task::perform(async move { sender.send(SubscriptionInput::Start(state)).await }, |_| Message::Error)
             }
         }
     }
@@ -376,33 +378,40 @@ impl State {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        Subscription::run(worker)
-    }
-}
+        Subscription::run(|| 
+            stream::channel(100, |mut output| async move {
+                // Create channel
+                let (sender, mut receiver) = mpsc::channel(1024);
 
-fn worker() -> impl Stream<Item = Message> {
-    stream::channel(100, |mut output| async move {
-        // Create channel
-        let (sender, mut receiver) = mpsc::channel(1024);
+                // Send the sender back to the application
+                output.send(Message::SubscriptionReady(sender)).await.unwrap();
 
-        // Send the sender back to the application
-        output.send(Message::SubscriptionReady(sender)).await.unwrap();
+                loop {
+                    use iced::futures::StreamExt;
 
-        loop {
-            use iced::futures::StreamExt;
+                    // Read next input sent from `Application`
+                    let msg = receiver.select_next_some().await;
 
-            // Read next input sent from `Application`
-            let msg = receiver.select_next_some().await;
+                    match msg {
+                        SubscriptionInput::Start(state) => {
+                            let mut child = ffmpeg::convert(&state, "video2.mp4");
+                            let stderr = child.stdout.take().unwrap();
+                            
+                            // first pass
+                            let reader = BufReader::new(stderr);
 
-            match msg {
-                SubscriptionInput::Start => {
-                    for i in 0..5000 {
-                        output.send(Message::SubscriptionProgress(i)).await.unwrap();
+                            for line in reader.lines() {
+                                let line = line.unwrap();
+                                if line.starts_with("out_time=") {
+                                    println!("{line}");
+                                }
+                            }
+
+                            output.send(Message::SubscriptionFinished).await.unwrap();
+                        }
                     }
-
-                    output.send(Message::SubscriptionFinished).await.unwrap();
                 }
-            }
-        }
-    })
+            })
+        )
+    }
 }

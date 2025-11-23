@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::process::{Command};
+use std::process::{Child, Command, Stdio};
 
 use std::env;
 use std::process::exit;
@@ -158,9 +158,12 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 
 // converts the video via fffmpeg
 // expects sanitized input (correct from/to timestamps, valid FPS, etc.)
-pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
+pub fn convert(state: &ui::State, output: &str) -> Child {
     // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
+
+    arguments.push("-progress");
+    arguments.push("pipe:1");
 
     // input file
     arguments.push("-i");
@@ -197,9 +200,8 @@ pub fn convert(state: &ui::State, output: &str) -> Result<(), Box<dyn Error>> {
     // run command
     Command::new(program_path(Program::Ffmpeg))
         .args(&arguments)
-        .spawn()?;
-
-    println!("{:?}", arguments);
-
-    Ok(())
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap()
 }
