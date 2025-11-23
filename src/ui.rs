@@ -210,7 +210,10 @@ impl State {
                     Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
                 };
 
-                *self = state;
+                *self = State { 
+                    channel_sender: self.channel_sender.clone(),
+                    ..state
+                };
                 Task::none()
             }
 
