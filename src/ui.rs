@@ -1,6 +1,11 @@
 use std::path::Path;
 use std::result::Result;
 
+use iced::futures::channel::mpsc;
+use iced::futures::sink::SinkExt;
+use iced::futures::Stream;
+use iced::stream;
+
 use iced::*;
 use iced::widget::{*, column};
 
@@ -15,10 +20,19 @@ pub struct State {
     pub file: String,
     pub fps: String,
     pub convert_720p: bool,
+
+    pub channel_sender: Option<mpsc::Sender<SubscriptionInput>>
+}
+
+pub enum SubscriptionInput {
+    Start
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    SubscriptionReady(mpsc::Sender<SubscriptionInput>),
+    SubscriptionFinished,
+
     ChangeFrom(String),
     ChangeTo(String),
 
@@ -128,6 +142,16 @@ fn validate_state(state: &State) -> Vec<String> {
 impl State {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::SubscriptionReady(sender) => {
+                self.channel_sender = Some(sender.clone());
+                println!("ready!");
+                Task::none()
+            }
+            Message::SubscriptionFinished => {
+                println!("WE DID IT!");
+                Task::none()
+            }
+
             Message::ChangeFrom(from) => {
                 self.from = from;
                 Task::none()
@@ -138,7 +162,9 @@ impl State {
             }
             Message::ChangeFile(file) => {
                 self.file = file;
-                Task::none()
+                
+                let mut sender = self.channel_sender.clone().unwrap();
+                Task::perform(async move { sender.send(SubscriptionInput::Start).await }, |_| Message::Error)
             }
             Message::ChangeFps(fps) => {
                 self.fps = fps;
@@ -343,4 +369,31 @@ impl State {
             Space::new(0, 5)
         ])
     }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        Subscription::run(worker)
+    }
+}
+
+fn worker() -> impl Stream<Item = Message> {
+    stream::channel(100, |mut output| async move {
+        // Create channel
+        let (sender, mut receiver) = mpsc::channel(1024);
+
+        // Send the sender back to the application
+        output.send(Message::SubscriptionReady(sender)).await.unwrap();
+
+        loop {
+            use iced::futures::StreamExt;
+
+            // Read next input sent from `Application`
+            let msg = receiver.select_next_some().await;
+
+            match msg {
+                SubscriptionInput::Start => {
+                    output.send(Message::SubscriptionFinished).await.unwrap();
+                }
+            }
+        }
+    })
 }

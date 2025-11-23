@@ -19,7 +19,7 @@ fn main() {
     };
 
     // run iced application with custom initial state
-    let result = iced::application("icecutter", ui::State::update, ui::State::view)
+    let result = iced::application("icecutter", ui::State::update, ui::State::view).subscription(ui::State::subscription)
         .window(iced::window::Settings {
             size: (640.0, 480.0).into(),
             resizable: false,
