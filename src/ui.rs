@@ -32,7 +32,7 @@ pub enum SubscriptionInput {
 #[derive(Debug, Clone)]
 pub enum Message {
     SubscriptionReady(mpsc::Sender<SubscriptionInput>),
-    SubscriptionProgress(i32),
+    SubscriptionProgress(String),
     SubscriptionFinished,
 
     ChangeFrom(String),
@@ -403,7 +403,8 @@ impl State {
                             for line in reader.lines() {
                                 let line = line.unwrap();
                                 if line.starts_with("out_time=") {
-                                    println!("{line}");
+                                    println!("in subscription: {line}");
+                                    output.send(Message::SubscriptionProgress(line)).await.unwrap();
                                 }
                             }
 
