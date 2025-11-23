@@ -31,6 +31,7 @@ pub enum SubscriptionInput {
 #[derive(Debug, Clone)]
 pub enum Message {
     SubscriptionReady(mpsc::Sender<SubscriptionInput>),
+    SubscriptionProgress(i32),
     SubscriptionFinished,
 
     ChangeFrom(String),
@@ -145,6 +146,10 @@ impl State {
             Message::SubscriptionReady(sender) => {
                 self.channel_sender = Some(sender.clone());
                 println!("ready!");
+                Task::none()
+            }
+            Message::SubscriptionProgress(progress) => {
+                println!("{progress}");
                 Task::none()
             }
             Message::SubscriptionFinished => {
@@ -391,6 +396,10 @@ fn worker() -> impl Stream<Item = Message> {
 
             match msg {
                 SubscriptionInput::Start => {
+                    for i in 0..5000 {
+                        output.send(Message::SubscriptionProgress(i)).await.unwrap();
+                    }
+
                     output.send(Message::SubscriptionFinished).await.unwrap();
                 }
             }
