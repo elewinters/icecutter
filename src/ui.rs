@@ -394,18 +394,23 @@ impl State {
 
                     match msg {
                         SubscriptionInput::Start(state) => {
-                            let mut child = ffmpeg::convert(&state, "video2.mp4");
-                            let stderr = child.stdout.take().unwrap();
+                            let (mut tx, mut rx) = mpsc::channel(100);
                             
-                            // first pass
-                            let reader = BufReader::new(stderr);
+                            std::thread::spawn(move || {
+                                let mut child = ffmpeg::convert(&state, "video2.mp4");
+                                let stderr = child.stdout.take().unwrap();
+                                let reader = BufReader::new(stderr);
 
-                            for line in reader.lines() {
-                                let line = line.unwrap();
-                                if line.starts_with("out_time=") {
-                                    println!("in subscription: {line}");
-                                    output.send(Message::SubscriptionProgress(line)).await.unwrap();
+                                for line in reader.lines() {
+                                    let line = line.unwrap();
+                                    if line.starts_with("out_time=") {
+                                        let _ = tx.try_send(line);
+                                    }
                                 }
+                            });
+
+                            while let Some(line) = rx.next().await {
+                                output.send(Message::SubscriptionProgress(line)).await.unwrap();
                             }
 
                             output.send(Message::SubscriptionFinished).await.unwrap();
