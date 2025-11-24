@@ -21,6 +21,8 @@ pub struct State {
     pub fps: String,
     pub convert_720p: bool,
 
+    pub converting: bool,
+    pub progress: f32,
     pub channel_sender: Option<mpsc::Sender<ConversionInput>>
 }
 
@@ -150,9 +152,9 @@ impl State {
             }
             Message::SubscriptionFinished => {
                 println!("WE DID IT!");
+                self.converting = false;
                 Task::none()
             }
-
             Message::ChangeFrom(from) => {
                 self.from = from;
                 Task::none()
@@ -205,7 +207,9 @@ impl State {
                     Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
                 };
 
-                *self = State { 
+                *self = State {
+                    converting: self.converting.clone(),
+                    progress: self.progress.clone(),
                     channel_sender: self.channel_sender.clone(),
                     ..state
                 };
@@ -261,6 +265,7 @@ impl State {
                 let mut sender = self.channel_sender.clone().unwrap();
                 let state = self.clone();
 
+                self.converting = true;
                 Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::Error)
             }
         }
@@ -285,6 +290,23 @@ impl State {
                 .collect::<Vec<Element<Message>>>()
         )
         .spacing(5)
+        .into()
+    }
+
+    fn progress_view(&self) -> Element<'_, Message> {
+        if !self.converting {
+            return Space::new(0, 0).into();
+        }
+
+        column![
+            horizontal_rule(1),
+            text("processing with ffmpeg..."),
+            progress_bar(0.0..=100.0, self.progress)
+                .height(15)
+        ]
+        .align_x(Center)
+        .padding(5)
+        .spacing(10)
         .into()
     }
 
@@ -347,10 +369,13 @@ impl State {
 
                     // convert button
                     button("convert")
-                        .on_press_maybe(match validate_state(self).is_empty() {
-                            true => Some(Message::ConvertFileDialog),
-                            false => None
+                        .on_press_maybe(match (validate_state(self).is_empty(), self.converting) {
+                            (true, false) => Some(Message::ConvertFileDialog),
+                            _ => None
                         }),
+
+                    // progress bar
+                    self.progress_view()
                 ]
                 .align_x(Center)
                 .padding(25)
