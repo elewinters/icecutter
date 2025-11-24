@@ -335,7 +335,7 @@ impl State {
                 column![
                     // text column
                     column![
-                        text("icecutter v1.2.1")
+                        text("icecutter v1.3.0")
                             .size(30),
                         text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
                             .center(),
