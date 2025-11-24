@@ -256,17 +256,12 @@ impl State {
                 };
 
                 // get the selected file path
-                let path = file.path().to_string_lossy();
-                
-                // convert the input file with the specified state
-                //if let Err(err) = ffmpeg::convert(self, &path) {
-                //    return Task::perform(error::show_error_async(err.to_string()), |_| Message::Error);
-                //}
+                let output_file = file.path().to_string_lossy().to_string();
                 
                 let mut sender = self.channel_sender.clone().unwrap();
                 let state = self.clone();
 
-                Task::perform(async move { sender.send(ConversionInput::Start(state)).await }, |_| Message::Error)
+                Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::Error)
             }
         }
     }

@@ -23,7 +23,10 @@ pub enum Program {
 }
 
 pub enum ConversionInput {
-    Start(ui::State)
+    Start {
+        state: ui::State,
+        output_file: String
+    }
 }
 
 // returns the path of either ffmpeg or ffprobe
@@ -230,14 +233,14 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
 
         loop {
             // await the Start message
-            let ConversionInput::Start(state) = msg_rx.select_next_some().await;
+            let ConversionInput::Start{state, output_file} = msg_rx.select_next_some().await;
 
             // setup channel for communication with the bufreader thread
             let (mut progress_tx, mut progress_rx) = mpsc::channel(100);
             
             // read from ffmpeg output line by line and send it to the progress channel
             std::thread::spawn(move || {
-                let mut child = convert(&state, "video2.mp4");
+                let mut child = convert(&state, &output_file);
                 let stdout = child.stdout.take().unwrap();
                 let reader = BufReader::new(stdout);
 
