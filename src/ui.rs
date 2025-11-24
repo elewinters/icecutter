@@ -169,6 +169,7 @@ impl State {
             Message::SubscriptionFinished => {
                 println!("WE DID IT!");
                 self.conversion.converting = false;
+                self.conversion.progress = 0.0;
                 Task::none()
             }
             Message::ChangeFrom(from) => {
