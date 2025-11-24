@@ -14,6 +14,13 @@ use crate::ffmpeg;
 use ffmpeg::ConversionInput;
 
 #[derive(Default, Clone)]
+pub struct ConversionState {
+    pub converting: bool,
+    pub progress: f32,
+    pub channel: Option<mpsc::Sender<ConversionInput>>
+}
+
+#[derive(Default, Clone)]
 pub struct State {
     pub from: String,
     pub to: String,
@@ -22,9 +29,7 @@ pub struct State {
     pub fps: String,
     pub convert_720p: bool,
 
-    pub converting: bool,
-    pub progress: f32,
-    pub channel_sender: Option<mpsc::Sender<ConversionInput>>
+    pub conversion: ConversionState
 }
 
 #[derive(Debug, Clone)]
@@ -143,7 +148,7 @@ impl State {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::SubscriptionReady(sender) => {
-                self.channel_sender = Some(sender.clone());
+                self.conversion.channel = Some(sender.clone());
                 println!("ready!");
                 Task::none()
             }
@@ -156,14 +161,14 @@ impl State {
                 let minutes = split[1].parse::<u64>().unwrap_or_default();
                 let seconds = split[2].parse::<f32>().unwrap_or_default();
 
-                self.progress = (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32();
-                println!("{}", self.progress);
+                self.conversion.progress = (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32();
+                println!("{}", self.conversion.progress);
 
                 Task::none()
             }
             Message::SubscriptionFinished => {
                 println!("WE DID IT!");
-                self.converting = false;
+                self.conversion.converting = false;
                 Task::none()
             }
             Message::ChangeFrom(from) => {
@@ -219,9 +224,7 @@ impl State {
                 };
 
                 *self = State {
-                    converting: self.converting.clone(),
-                    progress: self.progress.clone(),
-                    channel_sender: self.channel_sender.clone(),
+                    conversion: self.conversion.clone(),
                     ..state
                 };
                 Task::none()
@@ -273,10 +276,10 @@ impl State {
                 // get the selected file path
                 let output_file = file.path().to_string_lossy().to_string();
                 
-                let mut sender = self.channel_sender.clone().unwrap();
+                let mut sender = self.conversion.channel.clone().unwrap();
                 let state = self.clone();
 
-                self.converting = true;
+                self.conversion.converting = true;
                 Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::Error)
             }
         }
@@ -305,7 +308,7 @@ impl State {
     }
 
     fn progress_view(&self) -> Element<'_, Message> {
-        if !self.converting {
+        if !self.conversion.converting {
             return Space::new(0, 0).into();
         }
 
@@ -314,7 +317,7 @@ impl State {
         column![
             horizontal_rule(1),
             text("processing with ffmpeg..."),
-            progress_bar(0.0..=max, self.progress)
+            progress_bar(0.0..=max, self.conversion.progress)
                 .height(15)
         ]
         .align_x(Center)
@@ -382,7 +385,7 @@ impl State {
 
                     // convert button
                     button("convert")
-                        .on_press_maybe(match (validate_state(self).is_empty(), self.converting) {
+                        .on_press_maybe(match (validate_state(self).is_empty(), self.conversion.converting) {
                             (true, false) => Some(Message::ConvertFileDialog),
                             _ => None
                         }),
