@@ -1,15 +1,29 @@
+use std::io::{BufRead, BufReader};
+
 use std::error::Error;
 use std::process::{Child, Command, Stdio};
 
 use std::env;
 use std::process::exit;
 
+use iced::futures::channel::mpsc;
+use iced::futures::sink::SinkExt;
+use iced::futures::Stream;
+use iced::futures::StreamExt;
+use iced::stream;
+
 use crate::ui;
 use crate::error;
+
+use ui::Message;
 
 pub enum Program {
     Ffmpeg,
     Ffprobe
+}
+
+pub enum ConversionInput {
+    Start(ui::State)
 }
 
 // returns the path of either ffmpeg or ffprobe
@@ -204,4 +218,44 @@ pub fn convert(state: &ui::State, output: &str) -> Child {
         .stdout(Stdio::piped())
         .spawn()
         .unwrap()
+}
+
+pub fn conversion_subscription() -> impl Stream<Item = Message> {
+    stream::channel(100, |mut output| async move {
+        // create channel for the application to communicate with the subscription
+        let (msg_tx, mut msg_rx) = mpsc::channel(1024);
+
+        // send the sender to the application
+        output.send(Message::SubscriptionReady(msg_tx)).await.unwrap();
+
+        loop {
+            // await the Start message
+            let ConversionInput::Start(state) = msg_rx.select_next_some().await;
+
+            // setup channel for communication with the bufreader thread
+            let (mut progress_tx, mut progress_rx) = mpsc::channel(100);
+            
+            // read from ffmpeg output line by line and send it to the progress channel
+            std::thread::spawn(move || {
+                let mut child = convert(&state, "video2.mp4");
+                let stdout = child.stdout.take().unwrap();
+                let reader = BufReader::new(stdout);
+
+                for line in reader.lines() {
+                    let line = line.unwrap();
+                    if line.starts_with("out_time=") {
+                        progress_tx.try_send(line).unwrap();
+                    }
+                }
+            });
+
+            // read from progress channel and send the SubscriptionProgress message to the application
+            while let Some(line) = progress_rx.next().await {
+                output.send(Message::SubscriptionProgress(line)).await.unwrap();
+            }
+
+            // no more messages from the progress channel, we have completed the operation
+            output.send(Message::SubscriptionFinished).await.unwrap();
+        }
+    })
 }

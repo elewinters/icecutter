@@ -1,17 +1,16 @@
-use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::result::Result;
 
 use iced::futures::channel::mpsc;
-use iced::futures::sink::SinkExt;
-use iced::futures::Stream;
-use iced::stream;
+use iced::futures::SinkExt;
 
 use iced::*;
 use iced::widget::{*, column};
 
 use crate::error;
 use crate::ffmpeg;
+
+use ffmpeg::ConversionInput;
 
 #[derive(Default, Clone)]
 pub struct State {
@@ -22,16 +21,12 @@ pub struct State {
     pub fps: String,
     pub convert_720p: bool,
 
-    pub channel_sender: Option<mpsc::Sender<SubscriptionInput>>
-}
-
-pub enum SubscriptionInput {
-    Start(State)
+    pub channel_sender: Option<mpsc::Sender<ConversionInput>>
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SubscriptionReady(mpsc::Sender<SubscriptionInput>),
+    SubscriptionReady(mpsc::Sender<ConversionInput>),
     SubscriptionProgress(String),
     SubscriptionFinished,
 
@@ -271,7 +266,7 @@ impl State {
                 let mut sender = self.channel_sender.clone().unwrap();
                 let state = self.clone();
 
-                Task::perform(async move { sender.send(SubscriptionInput::Start(state)).await }, |_| Message::Error)
+                Task::perform(async move { sender.send(ConversionInput::Start(state)).await }, |_| Message::Error)
             }
         }
     }
@@ -381,46 +376,6 @@ impl State {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        Subscription::run(|| 
-            stream::channel(100, |mut output| async move {
-                // Create channel
-                let (sender, mut receiver) = mpsc::channel(1024);
-
-                // Send the sender back to the application
-                output.send(Message::SubscriptionReady(sender)).await.unwrap();
-
-                loop {
-                    use iced::futures::StreamExt;
-
-                    // Read next input sent from `Application`
-                    let msg = receiver.select_next_some().await;
-
-                    match msg {
-                        SubscriptionInput::Start(state) => {
-                            let (mut tx, mut rx) = mpsc::channel(100);
-                            
-                            std::thread::spawn(move || {
-                                let mut child = ffmpeg::convert(&state, "video2.mp4");
-                                let stderr = child.stdout.take().unwrap();
-                                let reader = BufReader::new(stderr);
-
-                                for line in reader.lines() {
-                                    let line = line.unwrap();
-                                    if line.starts_with("out_time=") {
-                                        let _ = tx.try_send(line);
-                                    }
-                                }
-                            });
-
-                            while let Some(line) = rx.next().await {
-                                output.send(Message::SubscriptionProgress(line)).await.unwrap();
-                            }
-
-                            output.send(Message::SubscriptionFinished).await.unwrap();
-                        }
-                    }
-                }
-            })
-        )
+        Subscription::run(ffmpeg::conversion_subscription)
     }
 }
