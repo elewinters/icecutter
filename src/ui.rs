@@ -315,10 +315,11 @@ impl State {
         }
 
         let max = crate::timestamp_to_secs(&self.to) - crate::timestamp_to_secs(&self.from);
+        let percentage = (self.conversion.progress / max * 100.0).floor();
 
         column![
             horizontal_rule(1),
-            text("processing with ffmpeg..."),
+            text(format!("processing with ffmpeg: {percentage}%")),
             progress_bar(0.0..=max, self.conversion.progress)
                 .height(15)
         ]
