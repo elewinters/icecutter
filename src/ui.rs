@@ -1,6 +1,5 @@
 use std::path::Path;
 use std::result::Result;
-use std::time::Duration;
 
 use iced::futures::channel::mpsc;
 use iced::futures::SinkExt;
@@ -149,20 +148,22 @@ impl State {
         match message {
             Message::SubscriptionReady(sender) => {
                 self.conversion.channel = Some(sender.clone());
-                println!("ready!");
                 Task::none()
             }
             Message::SubscriptionProgress(progress) => {
-                if progress == "out_time=N/A" {
+                let mut progress = progress.strip_prefix("out_time=").unwrap().to_owned();
+
+                if progress == "N/A" {
                     return Task::none();
                 }
+                
+                // remove hour
+                progress.remove(0);
+                progress.remove(0);
+                progress.remove(0);
 
-                let split: Vec<&str> = progress.split(':').collect();
-                let minutes = split[1].parse::<u64>().unwrap_or_default();
-                let seconds = split[2].parse::<f32>().unwrap_or_default();
-
-                self.conversion.progress = (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32();
-                println!("{}", self.conversion.progress);
+                let secs = crate::timestamp_to_secs(&progress);
+                self.conversion.progress = secs;
 
                 Task::none()
             }
@@ -313,7 +314,7 @@ impl State {
             return Space::new(0, 0).into();
         }
 
-        let max = ffmpeg::output_length(&self.from, &self.to);
+        let max = crate::timestamp_to_secs(&self.to) - crate::timestamp_to_secs(&self.from);
 
         column![
             horizontal_rule(1),

@@ -1,5 +1,4 @@
 use std::io::{BufRead, BufReader};
-use std::time::Duration;
 
 use std::error::Error;
 use std::process::{Child, Command, Stdio};
@@ -139,25 +138,6 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     let seconds = &output[2];
 
     Ok(format!("{minutes}:{seconds}"))
-}
-
-// calculate the length that the output file will have given the paramaters
-pub fn output_length(from: &str, to: &str) -> f32 {
-    let parse_time = |time: &str| -> (u64, u64) {
-        let parts: Vec<&str> = time.split(':').collect();
-        (
-            parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0),
-            parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0)
-        )
-    };
-
-    let (from_minutes, from_seconds) = parse_time(from);
-    let (to_minutes, to_seconds) = parse_time(to);
-
-    let from_duration = Duration::from_mins(from_minutes) + Duration::from_secs(from_seconds);
-    let to_duration = Duration::from_mins(to_minutes) + Duration::from_secs(to_seconds);
-
-    (to_duration - from_duration).as_secs_f32()
 }
 
 // returns the FPS of the video
