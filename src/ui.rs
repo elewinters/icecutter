@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::result::Result;
+use std::time::Duration;
 
 use iced::futures::channel::mpsc;
 use iced::futures::SinkExt;
@@ -147,7 +148,17 @@ impl State {
                 Task::none()
             }
             Message::SubscriptionProgress(progress) => {
-                println!("{progress}");
+                if progress == "out_time=N/A" {
+                    return Task::none();
+                }
+
+                let split: Vec<&str> = progress.split(':').collect();
+                let minutes = split[1].parse::<u64>().unwrap_or_default();
+                let seconds = split[2].parse::<f32>().unwrap_or_default();
+
+                self.progress = (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32();
+                println!("{}", self.progress);
+
                 Task::none()
             }
             Message::SubscriptionFinished => {
@@ -298,10 +309,12 @@ impl State {
             return Space::new(0, 0).into();
         }
 
+        let max = ffmpeg::output_length(&self.from, &self.to);
+
         column![
             horizontal_rule(1),
             text("processing with ffmpeg..."),
-            progress_bar(0.0..=100.0, self.progress)
+            progress_bar(0.0..=max, self.progress)
                 .height(15)
         ]
         .align_x(Center)
