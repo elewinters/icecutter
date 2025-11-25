@@ -16,7 +16,11 @@ use ffmpeg::ConversionInput;
 pub struct ConversionState {
     pub converting: bool,
     pub progress: f32,
-    pub channel: Option<mpsc::Sender<ConversionInput>>
+    pub channel: Option<mpsc::Sender<ConversionInput>>,
+
+    // we make a copy so that the user can still freely change the timestamps while the conversion is happening
+    pub from: String,
+    pub to: String
 }
 
 #[derive(Default, Clone)]
@@ -285,8 +289,10 @@ impl State {
                 
                 let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the SubscriptionReady message");
                 let state = self.clone();
-
+                
                 self.conversion.converting = true;
+                self.conversion.from = self.from.clone();
+                self.conversion.to = self.to.clone();
                 Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::None)
             }
         }
@@ -319,7 +325,7 @@ impl State {
             return Space::new(0, 0).into();
         }
 
-        let max = crate::timestamp_to_secs(&self.to) - crate::timestamp_to_secs(&self.from);
+        let max = crate::timestamp_to_secs(&self.conversion.to) - crate::timestamp_to_secs(&self.conversion.from);
         let percentage = (self.conversion.progress / max * 100.0).floor();
 
         column![
