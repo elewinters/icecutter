@@ -45,11 +45,11 @@ pub enum Message {
     SubscriptionProgress(String),
     SubscriptionFinished,
 
-    SelectFileDialog,
-    SelectFileSelected(Option<rfd::FileHandle>),
+    SelectDialog,
+    SelectDialogFinished(Option<rfd::FileHandle>),
 
-    ConvertFileDialog,
-    ConvertFileSelected(Option<rfd::FileHandle>),
+    ConvertDialog,
+    ConvertDialogFinished(Option<rfd::FileHandle>),
 }
 
 // initializes the state from a video file
@@ -200,19 +200,19 @@ impl State {
             }
 
             // ran upon clicking the select button
-            Message::SelectFileDialog => {
+            Message::SelectDialog => {
                 Task::perform(async {
                     rfd::AsyncFileDialog::new()
                         .set_title("select video to convert")
                         .pick_file()
                         .await
                     },
-                    Message::SelectFileSelected // once the file dialog task is over, run this message
+                    Message::SelectDialogFinished // once the file dialog task is over, run this message
                 )
             }
 
             // ran when the select file dialog has finished
-            Message::SelectFileSelected(file_opt) => {
+            Message::SelectDialogFinished(file_opt) => {
                 // verify if file dialog succeeded
                 let Some(file) = file_opt else {
                     return Task::none()
@@ -235,7 +235,7 @@ impl State {
             }
 
             // ran upon clicking the convert button
-            Message::ConvertFileDialog => {
+            Message::ConvertDialog => {
                 let path = Path::new(&self.file);
 
                 // check if input file is a valid video
@@ -265,12 +265,12 @@ impl State {
                         .save_file()
                         .await
                     },
-                    Message::ConvertFileSelected // once the file dialog task is over, run this message
+                    Message::ConvertDialogFinished // once the file dialog task is over, run this message
                 )
             }
 
             // ran when the convert file dialog has finished
-            Message::ConvertFileSelected(file_opt) => {
+            Message::ConvertDialogFinished(file_opt) => {
                 // get filehandle if valid
                 // cancelling the file dialog isnt exactly an error so show_error isnt called
                 let Some(file) = file_opt else {
@@ -365,7 +365,7 @@ impl State {
                     // input file
                     row![
                         button("select")
-                            .on_press(Message::SelectFileDialog),
+                            .on_press(Message::SelectDialog),
                         Space::new(10, 0),
                         container(
                             text_input("input file", &self.file)
@@ -391,7 +391,7 @@ impl State {
                     // convert button
                     button("convert")
                         .on_press_maybe(match (validate_state(self).is_empty(), self.conversion.converting) {
-                            (true, false) => Some(Message::ConvertFileDialog),
+                            (true, false) => Some(Message::ConvertDialog),
                             _ => None
                         }),
 
