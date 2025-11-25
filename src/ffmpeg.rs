@@ -4,6 +4,10 @@ use std::error::Error;
 use std::process::{Child, Command, Stdio};
 
 #[cfg(target_os = "windows")]
+// we apply this to every Command we create (on windows) as to not create a console window
+// not doing this causes flashing console windows to keep popping up every time an ffmpeg/ffprobe command is ran
+// which is Less than ideal
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 use std::os::windows::process::CommandExt;
 
 use std::env;
@@ -64,7 +68,8 @@ fn program_path(program: Program) -> String {
 // this will return "true" for non-audio files like text files and executables and what not
 // but other checks will make sure that the input file is a valid video file through fps/length checks
 pub fn is_video(video: &str) -> bool {
-    let output = Command::new(program_path(Program::Ffprobe))
+    let mut command = Command::new(program_path(Program::Ffprobe));
+    command
         .arg("-i")
         .arg(video)
         .arg("-show_entries")
@@ -72,10 +77,13 @@ pub fn is_video(video: &str) -> bool {
         .arg("-v")
         .arg("quiet")
         .arg("-of")
-        .arg("csv=p=0")
-        .output();
+        .arg("csv=p=0");
 
-    let output = match output {
+    if cfg!(windows) {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = match command.output() {
         Ok(x) => x,
         Err(_) => return false
     };
@@ -98,12 +106,15 @@ pub fn is_video(video: &str) -> bool {
 // returns the ffmpeg version
 // this can theoretically panic however by the time this function is called we've already established that we have a valid ffmpeg/ffprobe installation
 pub fn program_version(program: Program) -> String {
-    let command = Command::new(program_path(program))
-        .arg("-version")
-        .output()
-        .expect("ffmpeg/ffprobe has to be valid and installed correctly");
+    let mut command = Command::new(program_path(program));
+    command.arg("-version");
 
-    let output = String::from_utf8(command.stdout).expect("output has to be valid utf8");
+    if cfg!(windows) {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = command.output().expect("ffmpeg/ffprobe has to be valid and installed correctly");
+    let output = String::from_utf8(output.stdout).expect("output has to be valid utf8");
     let output: Vec<&str> = output.split(' ').collect();
 
     output[2].to_owned()
@@ -112,7 +123,8 @@ pub fn program_version(program: Program) -> String {
 // returns the length of the video in MM:SS format
 pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
-    let output = Command::new(program_path(Program::Ffprobe))
+    let mut command = Command::new(program_path(Program::Ffprobe));
+    command
         .arg("-i")
         .arg(video)
         .arg("-show_entries")
@@ -121,8 +133,13 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
         .arg("quiet")
         .arg("-of")
         .arg("csv=p=0")
-        .arg("-sexagesimal")
-        .output()?;
+        .arg("-sexagesimal");
+    
+    if cfg!(windows) {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = command.output()?;
 
     // check if success
     if !output.status.success() {
@@ -146,8 +163,8 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 // returns the FPS of the video
 pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get FPS in FPS/1 format
-    let output = Command::new(program_path(Program::Ffprobe))
-        .arg("-i")
+    let mut command = Command::new(program_path(Program::Ffprobe)); 
+    command.arg("-i")
         .arg(video)
         .arg("-select_streams")
         .arg("v")
@@ -156,8 +173,13 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
         .arg("-v")
         .arg("quiet")
         .arg("-of")
-        .arg("csv=p=0")
-        .output()?;
+        .arg("csv=p=0");
+
+    if cfg!(windows) {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = command.output()?;
 
     // check if success
     if !output.status.success() {
@@ -222,14 +244,13 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
 
     // run command
     let mut command = Command::new(program_path(Program::Ffmpeg));
-
     command
         .args(&arguments)
         .stderr(Stdio::piped())
         .stdout(Stdio::piped());
 
     if cfg!(windows) {
-        command.creation_flags(crate::CREATE_NO_WINDOW);
+        command.creation_flags(CREATE_NO_WINDOW);
     }
 
     command.spawn()
