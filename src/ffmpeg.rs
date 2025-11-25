@@ -1,7 +1,10 @@
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 
 use std::error::Error;
 use std::process::{Child, Command, Stdio};
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 use std::env;
 use std::process::exit;
@@ -177,7 +180,7 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 // expects sanitized input (correct from/to timestamps, valid FPS, etc.)
 // this is ran by conversion_subscription when the user asks to convert a video
 // the returned child process gets used to track the output
-pub fn convert_process(state: &ui::State, output: &str) -> Child {
+pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
     // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
 
@@ -218,12 +221,21 @@ pub fn convert_process(state: &ui::State, output: &str) -> Child {
     arguments.push(output);
 
     // run command
-    Command::new(program_path(Program::Ffmpeg))
-        .args(&arguments)
-        .stderr(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap()
+    if cfg!(windows) {
+        Command::new(program_path(Program::Ffmpeg))
+            .args(&arguments)
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .creation_flags(crate::CREATE_NO_WINDOW)
+            .spawn()
+    }
+    else {
+        Command::new(program_path(Program::Ffmpeg))
+            .args(&arguments)
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+    }
 }
 
 pub fn conversion_subscription() -> impl Stream<Item = Message> {
@@ -240,12 +252,22 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
 
             // setup channel for communication with the bufreader thread
             let (mut progress_tx, mut progress_rx) = mpsc::channel(100);
+
+            let child = match convert_process(&state, &output_file) {
+                Ok(x) => x,
+                Err(err) => { 
+                    output.send(Message::SubscriptionError(format!("failed to start ffmpeg process: {err}"))).await.unwrap();
+                    continue;
+                }
+            };
+
+            let Some(stdout) = child.stdout else {
+                output.send(Message::SubscriptionError("failed to capture output of ffmpeg process".to_owned())).await.unwrap();
+                continue;
+            };
             
             // read from ffmpeg output line by line and send it to the progress channel
             std::thread::spawn(move || {
-                let child = convert_process(&state, &output_file);
-                let stdout = child.stdout.unwrap();
-
                 for line in BufReader::new(stdout).lines() {
                     // extract line string from Result
                     let Ok(line) = line else {

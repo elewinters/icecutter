@@ -1,6 +1,9 @@
 // disable console window on windows
 #![windows_subsystem = "windows"]
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 use std::env;
 use std::time::Duration;
 

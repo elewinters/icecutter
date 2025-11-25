@@ -42,6 +42,7 @@ pub enum Message {
     ChangeConvert720p(bool),
 
     SubscriptionReady(mpsc::Sender<ConversionInput>),
+    SubscriptionError(String),
     SubscriptionProgress(String),
     SubscriptionFinished,
 
@@ -178,6 +179,10 @@ impl State {
             // conversion subscription messages
             Message::SubscriptionReady(sender) => {
                 self.conversion.channel = Some(sender);
+                Task::none()
+            }
+            Message::SubscriptionError(error) => {
+                println!("{error}");
                 Task::none()
             }
             Message::SubscriptionProgress(mut progress) => {
