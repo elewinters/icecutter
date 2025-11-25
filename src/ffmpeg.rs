@@ -3,10 +3,10 @@ use std::io::{self, BufRead, BufReader};
 use std::error::Error;
 use std::process::{Child, Command, Stdio};
 
-#[cfg(target_os = "windows")]
 // we apply this to every Command we create (on windows) as to not create a console window
 // not doing this causes flashing console windows to keep popping up every time an ffmpeg/ffprobe command is ran
 // which is Less than ideal
+#[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 use std::os::windows::process::CommandExt;
 
@@ -259,7 +259,7 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
 pub fn conversion_subscription() -> impl Stream<Item = Message> {
     stream::channel(100, |mut output| async move {
         // create channel for the application to communicate with the subscription
-        let (msg_tx, mut msg_rx) = mpsc::channel(1024);
+        let (msg_tx, mut msg_rx) = mpsc::channel(100);
 
         // send the sender to the application
         output.send(Message::SubscriptionReady(msg_tx)).await.unwrap();
@@ -267,9 +267,6 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
         loop {
             // await the Start message
             let ConversionInput::Start{state, output_file} = msg_rx.select_next_some().await;
-
-            // setup channel for communication with the bufreader thread
-            let (mut progress_tx, mut progress_rx) = mpsc::channel(100);
 
             let child = match convert_process(&state, &output_file) {
                 Ok(x) => x,
@@ -280,11 +277,36 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             };
 
             let Some(stdout) = child.stdout else {
-                output.send(Message::SubscriptionError("failed to capture output of ffmpeg process".to_owned())).await.unwrap();
+                output.send(Message::SubscriptionError("failed to capture standard output of ffmpeg process".to_owned())).await.unwrap();
                 continue;
             };
+
+            let Some(stderr) = child.stderr else {
+                output.send(Message::SubscriptionError("failed to capture standard error output of ffmpeg process".to_owned())).await.unwrap();
+                continue;
+            };
+
+            // setup channel for communicating with stdout/stderr reader threads
+            let (mut process_tx, mut process_rx) = mpsc::channel(100);
+            let mut error_tx = process_tx.clone();
+
+            // reads stderr and detects if there are any errors
+            // if one is found, it gets sent to the process channel as an Err(String)
+            std::thread::spawn(move || {
+                for line in BufReader::new(stderr).lines() {
+                    // extract line string from Result
+                    let Ok(line) = line else {
+                        continue;
+                    };
+
+                    if line.starts_with("Error") {
+                        let _ = error_tx.try_send(Err(line));
+                    }
+                }
+            });
             
-            // read from ffmpeg output line by line and send it to the progress channel
+            // reads ffmpeg output, and tries to find the 'out_time=' line
+            // once its found, it gets sent to the process channel as an Ok(String) (the string being the progress number)
             std::thread::spawn(move || {
                 for line in BufReader::new(stdout).lines() {
                     // extract line string from Result
@@ -299,14 +321,17 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
                             .to_owned();
                         
                         // ignore error, it's ok if the messages don't make it
-                        let _ = progress_tx.try_send(progress);
+                        let _ = process_tx.try_send(Ok(progress));
                     }
                 }
             });
 
-            // read from progress channel and send the SubscriptionProgress message to the application
-            while let Some(line) = progress_rx.next().await {
-                let _ = output.send(Message::SubscriptionProgress(line)).await;
+            // read from progress channel, Ok means to send a subscription progress message, Err means to send a SubscriptionError message
+            while let Some(input) = process_rx.next().await {
+                match input {
+                    Ok(progress) => output.send(Message::SubscriptionProgress(progress)).await.unwrap(),
+                    Err(err) => output.send(Message::SubscriptionError(err)).await.unwrap()
+                }
             }
 
             // no more messages from the progress channel, we have completed the operation

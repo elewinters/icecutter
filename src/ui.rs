@@ -181,10 +181,10 @@ impl State {
                 self.conversion.channel = Some(sender);
                 Task::none()
             }
-            Message::SubscriptionError(error) => {
-                println!("{error}");
-                Task::none()
-            }
+            Message::SubscriptionError(err) => Task::perform(
+                error::show_error_async(err), 
+                |_| Message::None
+            ),
             Message::SubscriptionProgress(mut progress) => {
                 if progress == "N/A" {
                     return Task::none();
