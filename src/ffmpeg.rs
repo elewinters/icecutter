@@ -243,11 +243,10 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             
             // read from ffmpeg output line by line and send it to the progress channel
             std::thread::spawn(move || {
-                let mut child = convert_process(&state, &output_file);
-                let stdout = child.stdout.take().unwrap();
-                let reader = BufReader::new(stdout);
+                let child = convert_process(&state, &output_file);
+                let stdout = child.stdout.unwrap();
 
-                for line in reader.lines() {
+                for line in BufReader::new(stdout).lines() {
                     // extract line string from Result
                     let Ok(line) = line else {
                         continue;
