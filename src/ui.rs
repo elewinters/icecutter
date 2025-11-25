@@ -182,7 +182,7 @@ impl State {
                 Task::none()
             }
             Message::SubscriptionError(err) => Task::perform(
-                error::show_error_async(err), 
+                error::show_error_async(format!("ffmpeg error: {err}")), 
                 |_| Message::None
             ),
             Message::SubscriptionProgress(mut progress) => {
