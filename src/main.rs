@@ -9,8 +9,10 @@ mod ffmpeg;
 pub fn timestamp_to_secs(timestamp: &str) -> f32 {
     let split: Vec<&str> = timestamp.split(':').collect();
 
-    let minutes = split[0].parse::<u64>().unwrap_or_default();
-    let seconds = split[1].parse::<f32>().unwrap_or_default();
+    let minutes = split[0].parse::<u64>()
+        .expect("we have already established that the timestamp is valid");
+    let seconds = split[1].parse::<f32>()
+        .expect("we have already established that the timestamp is valid");
 
     (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32()
 }
