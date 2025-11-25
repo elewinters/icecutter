@@ -257,15 +257,16 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
                         let progress = line.strip_prefix("out_time=")
                             .expect("we have already verified that the string contains the prefix")
                             .to_owned();
-
-                        progress_tx.try_send(progress).unwrap();
+                        
+                        // ignore error, it's ok if the messages don't make it
+                        let _ = progress_tx.try_send(progress);
                     }
                 }
             });
 
             // read from progress channel and send the SubscriptionProgress message to the application
             while let Some(line) = progress_rx.next().await {
-                output.send(Message::SubscriptionProgress(line)).await.unwrap();
+                let _ = output.send(Message::SubscriptionProgress(line)).await;
             }
 
             // no more messages from the progress channel, we have completed the operation
