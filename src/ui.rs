@@ -185,27 +185,23 @@ impl State {
                 progress.remove(0);
                 progress.remove(0);
 
-                let secs = crate::timestamp_to_secs(&progress);
-                self.conversion.progress = secs;
+                self.conversion.progress = crate::timestamp_to_secs(&progress);
 
                 Task::none()
             }
             Message::SubscriptionFinished => {
-                println!("WE DID IT!");
                 self.conversion.converting = false;
                 self.conversion.progress = 0.0;
                 Task::none()
             }
 
             // ran upon clicking the select button
-            Message::SelectDialog => {
-                Task::perform(
-                    rfd::AsyncFileDialog::new()
-                        .set_title("select video to convert")
-                        .pick_file(),
-                    Message::SelectDialogFinished // once the file dialog task is over, run this message
-                )
-            }
+            Message::SelectDialog => Task::perform(
+                rfd::AsyncFileDialog::new()
+                    .set_title("select video to convert")
+                    .pick_file(),
+                Message::SelectDialogFinished // once the file dialog task is over, run this message
+            ),
 
             // ran when the select file dialog has finished
             Message::SelectDialogFinished(file_opt) => {
