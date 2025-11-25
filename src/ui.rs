@@ -257,11 +257,6 @@ impl State {
                     return Task::perform(error::show_error_async("'to' timestamp is longer than the video's duration".to_owned()), |_| Message::None);
                 }
 
-                let directory = match path.parent() {
-                    Some(path) => path.to_path_buf(),
-                    None => return Task::perform(error::show_error_async("invalid input file, failed to get parent directory from path"), |_| Message::None)
-                };
-
                 let file_name = match path.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
                     None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::None)
@@ -271,7 +266,6 @@ impl State {
                     rfd::AsyncFileDialog::new()
                         .set_title("save converted video")
                         .set_file_name(file_name)
-                        .set_directory(directory.as_path())
                         .save_file(),
                     Message::ConvertDialogFinished // once the file dialog task is over, run this message
                 )
