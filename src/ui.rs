@@ -205,7 +205,7 @@ impl State {
 
             // ran when the select file dialog has finished
             Message::SelectDialogFinished(file_opt) => {
-                // verify if file dialog succeeded
+                // get filehandle if a file was successfully picked
                 let Some(file) = file_opt else {
                     return Task::none()
                 };
@@ -237,13 +237,11 @@ impl State {
                     return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::None);
                 }
 
-                // get the directory of the file
                 let directory = match path.parent() {
                     Some(path) => path.to_path_buf(),
                     None => return Task::perform(error::show_error_async("invalid input file, failed to get parent directory from path"), |_| Message::None)
                 };
 
-                // get the file name of the file
                 let file_name = match path.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
                     None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::None)
@@ -261,8 +259,7 @@ impl State {
 
             // ran when the convert file dialog has finished
             Message::ConvertDialogFinished(file_opt) => {
-                // get filehandle if valid
-                // cancelling the file dialog isnt exactly an error so show_error isnt called
+                // get filehandle if a file was successfully picked
                 let Some(file) = file_opt else {
                     return Task::none(); 
                 };

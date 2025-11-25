@@ -173,18 +173,21 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
     Ok((x / y).round().to_string())
 }
 
-// converts the video via fffmpeg
+// starts the ffmpeg process to convert the video
 // expects sanitized input (correct from/to timestamps, valid FPS, etc.)
-pub fn convert(state: &ui::State, output: &str) -> Child {
+// this is ran by conversion_subscription when the user asks to convert a video
+// the returned child process gets used to track the output
+pub fn convert_process(state: &ui::State, output: &str) -> Child {
     // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
-
-    arguments.push("-progress");
-    arguments.push("pipe:1");
 
     // input file
     arguments.push("-i");
     arguments.push(&state.file);
+
+    // display ffmpeg progress in a more computer friendly format
+    arguments.push("-progress");
+    arguments.push("pipe:1");
 
     // cutting
     if !state.from.is_empty() && !state.to.is_empty() {
@@ -240,7 +243,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             
             // read from ffmpeg output line by line and send it to the progress channel
             std::thread::spawn(move || {
-                let mut child = convert(&state, &output_file);
+                let mut child = convert_process(&state, &output_file);
                 let stdout = child.stdout.take().unwrap();
                 let reader = BufReader::new(stdout);
 
@@ -250,6 +253,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
                         continue;
                     };
 
+                    // found out_time= line, strip the prefix and send to channel
                     if line.starts_with("out_time=") {
                         let progress = line.strip_prefix("out_time=")
                             .expect("we have already verified that the string contains the prefix")
