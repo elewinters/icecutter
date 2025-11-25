@@ -172,7 +172,7 @@ impl State {
 
             // conversion subscription messages
             Message::SubscriptionReady(sender) => {
-                self.conversion.channel = Some(sender.clone());
+                self.conversion.channel = Some(sender);
                 Task::none()
             }
             Message::SubscriptionProgress(mut progress) => {
@@ -278,7 +278,7 @@ impl State {
                 // get the selected file path
                 let output_file = file.path().to_string_lossy().to_string();
                 
-                let mut sender = self.conversion.channel.clone().unwrap();
+                let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the SubscriptionReady message");
                 let state = self.clone();
 
                 self.conversion.converting = true;
