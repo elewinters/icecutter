@@ -257,6 +257,16 @@ impl State {
                     return Task::perform(error::show_error_async("'to' timestamp is longer than the video's duration".to_owned()), |_| Message::None);
                 }
 
+                // and check if "from" is bigger than "to"
+                if crate::timestamp_to_secs(&self.from) > crate::timestamp_to_secs(&self.to) {
+                    return Task::perform(error::show_error_async("'from' timestamp is longer than the 'to' timestamp".to_owned()), |_| Message::None);
+                }
+
+                // and check if the timestamps are the same
+                if crate::timestamp_to_secs(&self.from) == crate::timestamp_to_secs(&self.to) {
+                    return Task::perform(error::show_error_async("the 'from' and 'to' timestamps cannot be the same".to_owned()), |_| Message::None);
+                }
+
                 let file_name = match path.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
                     None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::None)
