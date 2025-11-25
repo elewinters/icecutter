@@ -245,9 +245,17 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
                 let reader = BufReader::new(stdout);
 
                 for line in reader.lines() {
-                    let line = line.unwrap();
+                    // extract line string from Result
+                    let Ok(line) = line else {
+                        continue;
+                    };
+
                     if line.starts_with("out_time=") {
-                        progress_tx.try_send(line).unwrap();
+                        let progress = line.strip_prefix("out_time=")
+                            .expect("we have already verified that the string contains the prefix")
+                            .to_owned();
+
+                        progress_tx.try_send(progress).unwrap();
                     }
                 }
             });

@@ -175,9 +175,7 @@ impl State {
                 self.conversion.channel = Some(sender.clone());
                 Task::none()
             }
-            Message::SubscriptionProgress(progress) => {
-                let mut progress = progress.strip_prefix("out_time=").unwrap().to_owned();
-
+            Message::SubscriptionProgress(mut progress) => {
                 if progress == "N/A" {
                     return Task::none();
                 }
