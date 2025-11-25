@@ -8,6 +8,7 @@ use std::process::{Child, Command, Stdio};
 // which is Less than ideal
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
 use std::env;
@@ -79,9 +80,8 @@ pub fn is_video(video: &str) -> bool {
         .arg("-of")
         .arg("csv=p=0");
 
-    if cfg!(windows) {
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
 
     let output = match command.output() {
         Ok(x) => x,
@@ -109,9 +109,8 @@ pub fn program_version(program: Program) -> String {
     let mut command = Command::new(program_path(program));
     command.arg("-version");
 
-    if cfg!(windows) {
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
 
     let output = command.output().expect("ffmpeg/ffprobe has to be valid and installed correctly");
     let output = String::from_utf8(output.stdout).expect("output has to be valid utf8");
@@ -135,9 +134,8 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
         .arg("csv=p=0")
         .arg("-sexagesimal");
     
-    if cfg!(windows) {
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
 
     let output = command.output()?;
 
@@ -175,9 +173,8 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
         .arg("-of")
         .arg("csv=p=0");
 
-    if cfg!(windows) {
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
 
     let output = command.output()?;
 
@@ -249,9 +246,8 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
         .stderr(Stdio::piped())
         .stdout(Stdio::piped());
 
-    if cfg!(windows) {
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
 
     command.spawn()
 }
