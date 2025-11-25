@@ -124,6 +124,11 @@ fn validate_state(state: &State) -> Vec<String> {
         errors.push("'to' timestamp is not in a valid MM:SS format".to_owned());
     }
 
+    // check if "to" timestamp isn't 00:00
+    if state.to == "00:00" || state.to == "0:00" || state.to == "00:0" || state.to == "0:0" {
+        errors.push("'to' timestamp can't be 00:00".to_owned());
+    }
+
     // check if input file field is empty
     if state.file.is_empty() {
         errors.push("'input file' field is empty".to_owned());
