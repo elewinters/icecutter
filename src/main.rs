@@ -1,5 +1,11 @@
-// disable console window on windows
-#![windows_subsystem = "windows"]
+// disable console window on windows, but not in debug mode, cuz for some reason printing doesn't work right with this on
+#![cfg_attr(
+    all(
+        target_os = "windows",
+        not(debug_assertions),
+    ),
+    windows_subsystem = "windows"
+)]
 
 use std::env;
 use std::time::Duration;
