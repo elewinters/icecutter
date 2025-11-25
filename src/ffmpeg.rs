@@ -221,21 +221,18 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
     arguments.push(output);
 
     // run command
+    let mut command = Command::new(program_path(Program::Ffmpeg));
+
+    command
+        .args(&arguments)
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped());
+
     if cfg!(windows) {
-        Command::new(program_path(Program::Ffmpeg))
-            .args(&arguments)
-            .stderr(Stdio::piped())
-            .stdout(Stdio::piped())
-            .creation_flags(crate::CREATE_NO_WINDOW)
-            .spawn()
+        command.creation_flags(crate::CREATE_NO_WINDOW);
     }
-    else {
-        Command::new(program_path(Program::Ffmpeg))
-            .args(&arguments)
-            .stderr(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-    }
+
+    command.spawn()
 }
 
 pub fn conversion_subscription() -> impl Stream<Item = Message> {
