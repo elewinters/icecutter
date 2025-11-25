@@ -243,8 +243,14 @@ impl State {
                 // check if input file is a valid video
                 // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
                 // in which case if the user inputted a non-video into that field, ffmpeg would error out
-                if let Err(err) = initialize_state(&path.to_string_lossy()) {
-                    return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::None);
+                let length = match initialize_state(&path.to_string_lossy()) {
+                    Ok(state) => state.to,
+                    Err(err) => return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::None)
+                };
+
+                // additionally check if to timestamp is bigger than the video's length
+                if crate::timestamp_to_secs(&self.to) > crate::timestamp_to_secs(&length) {
+                    return Task::perform(error::show_error_async("'to' timestamp is longer than the video's duration".to_owned()), |_| Message::None);
                 }
 
                 let directory = match path.parent() {
