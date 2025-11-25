@@ -259,7 +259,7 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
 pub fn conversion_subscription() -> impl Stream<Item = Message> {
     stream::channel(100, |mut output| async move {
         // create channel for the application to communicate with the subscription
-        let (msg_tx, mut msg_rx) = mpsc::channel(100);
+        let (msg_tx, mut msg_rx) = mpsc::channel(1024);
 
         // send the sender to the application
         output.send(Message::SubscriptionReady(msg_tx)).await.unwrap();
@@ -287,7 +287,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             };
 
             // setup channel for communicating with stdout/stderr reader threads
-            let (mut process_tx, mut process_rx) = mpsc::channel(100);
+            let (mut process_tx, mut process_rx) = mpsc::channel(64);
             let mut error_tx = process_tx.clone();
 
             // reads stderr and detects if there are any errors
