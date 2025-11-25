@@ -1,3 +1,6 @@
+// disable console window on windows
+#![windows_subsystem = "windows"]
+
 use std::env;
 use std::time::Duration;
 
