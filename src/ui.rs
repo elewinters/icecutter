@@ -33,18 +33,17 @@ pub struct State {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SubscriptionReady(mpsc::Sender<ConversionInput>),
-    SubscriptionProgress(String),
-    SubscriptionFinished,
+    None,
 
     ChangeFrom(String),
     ChangeTo(String),
-
     ChangeFile(String),
     ChangeFps(String),
     ChangeConvert720p(bool),
 
-    Error,
+    SubscriptionReady(mpsc::Sender<ConversionInput>),
+    SubscriptionProgress(String),
+    SubscriptionFinished,
 
     SelectFileDialog,
     SelectFileSelected(Option<rfd::FileHandle>),
@@ -146,6 +145,32 @@ fn validate_state(state: &State) -> Vec<String> {
 impl State {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            // dummy message
+            Message::None => Task::none(),
+
+            // state changes
+            Message::ChangeFrom(from) => {
+                self.from = from;
+                Task::none()
+            }
+            Message::ChangeTo(to) => {
+                self.to = to;
+                Task::none()
+            }
+            Message::ChangeFile(file) => {
+                self.file = file;
+                Task::none()
+            }
+            Message::ChangeFps(fps) => {
+                self.fps = fps;
+                Task::none()
+            }
+            Message::ChangeConvert720p(convert) => {
+                self.convert_720p = convert;
+                Task::none()
+            }
+
+            // conversion subscription messages
             Message::SubscriptionReady(sender) => {
                 self.conversion.channel = Some(sender.clone());
                 Task::none()
@@ -173,29 +198,6 @@ impl State {
                 self.conversion.progress = 0.0;
                 Task::none()
             }
-            Message::ChangeFrom(from) => {
-                self.from = from;
-                Task::none()
-            }
-            Message::ChangeTo(to) => {
-                self.to = to;
-                Task::none()
-            }
-            Message::ChangeFile(file) => {
-                self.file = file;
-                Task::none()
-            }
-            Message::ChangeFps(fps) => {
-                self.fps = fps;
-                Task::none()
-            }
-            Message::ChangeConvert720p(convert) => {
-                self.convert_720p = convert;
-                Task::none()
-            }
-
-            // dummy message
-            Message::Error => Task::none(),
 
             // ran upon clicking the select button
             Message::SelectFileDialog => {
@@ -222,7 +224,7 @@ impl State {
                 // initialize state based on selected file
                 let state = match initialize_state(&path) {
                     Ok(x) => x,
-                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::Error)
+                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::None)
                 };
 
                 *self = State {
@@ -240,19 +242,19 @@ impl State {
                 // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
                 // in which case if the user inputted a non-video into that field, ffmpeg would error out
                 if let Err(err) = initialize_state(&path.to_string_lossy()) {
-                    return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::Error);
+                    return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::None);
                 }
 
                 // get the directory of the file
                 let directory = match path.parent() {
                     Some(path) => path.to_path_buf(),
-                    None => return Task::perform(error::show_error_async("invalid input file, failed to get parent directory from path"), |_| Message::Error)
+                    None => return Task::perform(error::show_error_async("invalid input file, failed to get parent directory from path"), |_| Message::None)
                 };
 
                 // get the file name of the file
                 let file_name = match path.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
-                    None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::Error)
+                    None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::None)
                 };
 
                 Task::perform(async move {
@@ -282,7 +284,7 @@ impl State {
                 let state = self.clone();
 
                 self.conversion.converting = true;
-                Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::Error)
+                Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::None)
             }
         }
     }
