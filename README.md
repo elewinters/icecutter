@@ -8,9 +8,9 @@ meant for quickly cutting clips to upload to discord
 
 features
 - the ability to cut videos down to a shorter duration
-- lowering the fps/conversion to 720p for an even lower file size
+- lowering the fps/resolution for an even lower file size
 - when a video file is passed in as a command line argument, that video's information is automatically inserted into all of the input fields. this allows for easy integration with right click menus and other utilities
 - input validation (making sure that the user doesn't input invalid ffmpeg options)
-- graphical error handling
+- robust graphical error handling with OS native dialogs
 - ffmpeg and ffprobe are bundled in
 - a progress bar that tracks the ffmpeg conversion progress
