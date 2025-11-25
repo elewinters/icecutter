@@ -101,8 +101,25 @@ fn validate_timestamp(timestamp: &str) -> bool {
         return false
     }
 
-    // if minutes and seconds exist and if they're both valid u32 integers, we return true
-    matches!((minutes, seconds), (Some(x), Some(y)) if x.parse::<u32>().is_ok() && y.parse::<u32>().is_ok())
+    // if minutes and seconds exist and if they're both valid u32 integers that arent greater than 59, we return true
+    match (minutes, seconds) {
+        (Some(x), Some(y)) => {
+            let Ok(minutes) = x.parse::<u32>() else {
+                return false
+            };
+
+            let Ok(seconds) = y.parse::<u32>() else {
+                return false
+            };
+
+            if minutes > 59 || seconds > 59 {
+                return false
+            }
+
+            true
+        }
+        _ => false
+    }
 }
 
 // checks if all of the input values are valid, and returns a vector of string errors
