@@ -1,4 +1,3 @@
-use std::fmt;
 use std::io::{self, BufRead, BufReader};
 
 use std::error::Error;
@@ -31,15 +30,6 @@ pub enum Program {
     Ffprobe
 }
 
-impl fmt::Display for Program {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Program::Ffmpeg => write!(f, "ffmpeg"),
-            Program::Ffprobe => write!(f, "ffprobe")
-        }
-    }
-}
-
 pub enum ConversionInput {
     Start {
         state: ui::State,
@@ -48,44 +38,50 @@ pub enum ConversionInput {
 }
 
 // returns the path of either ffmpeg or ffprobe
+// if a global installaton is found in the user's PATH variable, it takes priority and gets returned, even if the bundled ffmpeg/ffprobe programs are present
+// if there's no global installation, we look for the bundled programs that should be in the same directory as icecutter
+// if neither are found, the program shows an error message and exits with an error code of 1
 fn program_path(program: Program) -> String {
-    let env_path = |program: &str| {
+    // convert program to string depending on OS
+    let program = match (program, cfg!(windows)) {
+        (Program::Ffmpeg, true) => "ffmpeg.exe",
+        (Program::Ffmpeg, false) => "ffmpeg",
+        
+        (Program::Ffprobe, true) => "ffprobe.exe",
+        (Program::Ffprobe, false) => "ffprobe"
+    };
+
+    // get directory of executable
+    let mut exe_dir = env::current_exe().expect("could not get path of the current executable");
+    exe_dir.pop();
+
+    // get path of specified program from PATH variable
+    // returns Ok(path) if it was found or Err(()) if it wasn't
+    let env_path = || -> Result<String, ()> {
         // get PATH environment variable
         let Some(paths) = env::var_os("PATH") else {
             return Err(());
         };
 
         // iterate over every directory in the PATH
-        for mut path in env::split_paths(&paths) {
+        for path in env::split_paths(&paths) {
             // add "ffmpeg.exe" to the end of the directory path
-            if cfg!(windows) {
-                path.push(program.to_owned() + ".exe")
-            }
-            else {
-                path.push(program);
-            }
+            let path = path.join(program);
 
             // check if such path exists, and return it if it does
-            if path.exists() {
+            // skip the bundled program path, as that counts too as being in the PATH for some reason (on windows anyway) 
+            if path.exists() && path != exe_dir.join(program) {
                 return Ok(path.to_string_lossy().to_string());
             }
         }
 
-        return Err(())
+        Err(())
     };
 
-    let bundle_path = |program: &str| {
-        // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
-        let mut path = env::current_exe().expect("could not get path of the current executable");
-        path.pop();
-
-        // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
-        if cfg!(windows) {
-            path.push(program.to_owned() + ".exe");
-        }
-        else {
-            path.push(program);
-        }
+    // get path of specified program in the same directory as icecutter (these are the files that are bundled in with icecutter in the zip file)
+    // returns Ok(path) if it was found or Err(()) if it wasn't
+    let bundle_path = || -> Result<String, ()> {
+        let path = exe_dir.join(program);
 
         if !path.exists() {
             return Err(())
@@ -94,14 +90,13 @@ fn program_path(program: Program) -> String {
         Ok(path.to_string_lossy().to_string())
     };
 
-    // convert program to string
-    let program = program.to_string();
-
-    if let Ok(path) = env_path(&program) {
+    if let Ok(path) = env_path() {
+        println!("using global {program}: {path}");
         return path;
     }
 
-    if let Ok(path) = bundle_path(&program) {
+    if let Ok(path) = bundle_path() {
+        println!("using bundled {program}: {path}");
         return path;
     }
 
