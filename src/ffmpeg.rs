@@ -1,3 +1,4 @@
+use std::fmt;
 use std::io::{self, BufRead, BufReader};
 
 use std::error::Error;
@@ -30,6 +31,15 @@ pub enum Program {
     Ffprobe
 }
 
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Program::Ffmpeg => write!(f, "ffmpeg"),
+            Program::Ffprobe => write!(f, "ffprobe")
+        }
+    }
+}
+
 pub enum ConversionInput {
     Start {
         state: ui::State,
@@ -39,30 +49,64 @@ pub enum ConversionInput {
 
 // returns the path of either ffmpeg or ffprobe
 fn program_path(program: Program) -> String {
-    // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
-    let mut path = env::current_exe().expect("could not get path of the current executable");
-    path.pop();
+    let env_path = |program: &str| {
+        // get PATH environment variable
+        let Some(paths) = env::var_os("PATH") else {
+            return Err(());
+        };
 
-    // convert program enum to program string
-    let program_str = match program {
-        Program::Ffmpeg => "ffmpeg".to_owned(),
-        Program::Ffprobe => "ffprobe".to_owned()
+        // iterate over every directory in the PATH
+        for mut path in env::split_paths(&paths) {
+            // add "ffmpeg.exe" to the end of the directory path
+            if cfg!(windows) {
+                path.push(program.to_owned() + ".exe")
+            }
+            else {
+                path.push(program);
+            }
+
+            // check if such path exists, and return it if it does
+            if path.exists() {
+                return Ok(path.to_string_lossy().to_string());
+            }
+        }
+
+        return Err(())
     };
 
-    // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
-    if cfg!(windows) {
-        path.push(program_str + ".exe");
-    }
-    else {
-        path.push(program_str);
+    let bundle_path = |program: &str| {
+        // get the path of the current executable and remove the actual executable from the path so we just get the directory it's in
+        let mut path = env::current_exe().expect("could not get path of the current executable");
+        path.pop();
+
+        // add either "ffmpeg.exe" or just "ffmpeg" depending on the OS
+        if cfg!(windows) {
+            path.push(program.to_owned() + ".exe");
+        }
+        else {
+            path.push(program);
+        }
+
+        if !path.exists() {
+            return Err(())
+        }
+
+        Ok(path.to_string_lossy().to_string())
+    };
+
+    // convert program to string
+    let program = program.to_string();
+
+    if let Ok(path) = env_path(&program) {
+        return path;
     }
 
-    if !path.exists() {
-        error::show_error(format!("failed to find \"{}\", are you sure it's in the same directory as icecutter?", path.display()));
-        exit(1);
+    if let Ok(path) = bundle_path(&program) {
+        return path;
     }
 
-    path.to_string_lossy().to_string()
+    error::show_error(format!("failed to find '{program}' both in the PATH environment variable and in the directory icecutter is, please make sure that ffmpeg and ffprobe are in the same directory as icecutter, or install ffmpeg globally instead if you'd like"));
+    exit(1);
 }
 
 // specifically check if input file is a video file and not an audio file
