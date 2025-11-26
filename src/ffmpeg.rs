@@ -127,7 +127,7 @@ pub fn is_video(video: &str) -> bool {
         Err(_) => return false
     };
 
-    let output = String::from_utf8(output.stdout).expect("output has to be valid utf8");
+    let output = String::from_utf8_lossy(&output.stdout);
     let output: Vec<&str> = output.split('\n').collect();
 
     let text = match output.first() {
@@ -152,7 +152,7 @@ pub fn program_version(program: Program) -> String {
     command.creation_flags(CREATE_NO_WINDOW);
 
     let output = command.output().expect("ffmpeg/ffprobe has to be valid and installed correctly");
-    let output = String::from_utf8(output.stdout).expect("output has to be valid utf8");
+    let output = String::from_utf8_lossy(&output.stdout);
     let output: Vec<&str> = output.split(' ').collect();
 
     output[2].to_owned()
@@ -184,7 +184,7 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     }
 
     // get output from command and split by : and . so that we can get only the minutes and seconds
-    let output = String::from_utf8(output.stdout)?;
+    let output = String::from_utf8_lossy(&output.stdout);
     let output: Vec<&str> = output.split(&[':', '.']).collect();
 
     if output.len() < 3 {
@@ -223,7 +223,7 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
     }
 
     // get output from command
-    let output = String::from_utf8(output.stdout)?;
+    let output = String::from_utf8_lossy(&output.stdout);
     let output: Vec<&str> = output.split('/').collect();
 
     // get the first number and the second number
