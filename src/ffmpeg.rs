@@ -1,7 +1,15 @@
 use std::io::{self, BufRead, BufReader};
 
+use std::env;
+use std::process::{exit, Child, Command, Stdio};
+
 use std::error::Error;
-use std::process::{Child, Command, Stdio};
+
+use iced::futures::channel::mpsc;
+use iced::futures::sink::SinkExt;
+use iced::futures::Stream;
+use iced::futures::StreamExt;
+use iced::stream;
 
 // we apply this to every Command we create (on windows) as to not create a console window
 // not doing this causes flashing console windows to keep popping up every time an ffmpeg/ffprobe command is ran
@@ -11,19 +19,8 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-use std::env;
-use std::process::exit;
-
-use iced::futures::channel::mpsc;
-use iced::futures::sink::SinkExt;
-use iced::futures::Stream;
-use iced::futures::StreamExt;
-use iced::stream;
-
-use crate::ui;
+use crate::ui::{self, Message};
 use crate::error;
-
-use ui::Message;
 
 pub enum Program {
     Ffmpeg,

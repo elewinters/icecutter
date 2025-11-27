@@ -8,9 +8,7 @@ use iced::*;
 use iced::widget::{*, column};
 
 use crate::error_async;
-use crate::ffmpeg;
-
-use ffmpeg::ConversionInput;
+use crate::ffmpeg::{self, ConversionInput};
 
 #[derive(Default, Clone)]
 pub struct ConversionState {

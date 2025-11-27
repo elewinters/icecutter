@@ -10,6 +10,9 @@
 use std::env;
 use std::time::Duration;
 
+use iced::window::Settings;
+use iced::Task;
+
 mod ui;
 mod error;
 mod ffmpeg;
@@ -42,12 +45,12 @@ fn main() {
 
     // run iced application with custom initial state
     let result = iced::application("icecutter", ui::State::update, ui::State::view).subscription(ui::State::subscription)
-        .window(iced::window::Settings {
+        .window(Settings {
             size: (640.0, 480.0).into(),
             resizable: false,
             ..Default::default()
         })
-        .run_with(move || (state, iced::Task::none()));
+        .run_with(move || (state, Task::none()));
     
     if let Err(err) = result {
         error!("failed to initialize iced, something must've went very wrong: {err}");
