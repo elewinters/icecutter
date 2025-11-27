@@ -14,3 +14,14 @@ features
 - robust graphical error handling with OS native dialogs
 - ffmpeg and ffprobe are bundled in
 - a progress bar that tracks the ffmpeg conversion progress
+
+# installation
+download icecutter from the releases tab (https://github.com/elewinters/icecutter/releases/latest)
+
+if you don't have ffmpeg installed on your system you may download the zip file bundle which comes with ffmpeg (make sure that icecutter and ffmpeg are always in the same directory though)
+
+if you already have it installed feel free to download the standalone versions
+
+on linux you can easily install ffmpeg with your package manager, on a debian based distro this would look somethin like
+
+``apt install ffmpeg``
