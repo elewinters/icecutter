@@ -100,7 +100,7 @@ fn program_path(program: Program) -> String {
         return path;
     }
 
-    error::show_error(format!("failed to find ffmpeg both in the PATH environment variable and in the directory icecutter is in\n\nplease make sure that ffmpeg and ffprobe are in the same directory as icecutter, or install ffmpeg globally instead if you'd like"));
+    error::show_error("failed to find ffmpeg both in the PATH environment variable and in the directory icecutter is in\n\nplease make sure that ffmpeg and ffprobe are in the same directory as icecutter, or install ffmpeg globally instead if you'd like".to_owned());
     exit(1);
 }
 
