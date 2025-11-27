@@ -1,11 +1,11 @@
 use std::path::Path;
 use std::result::Result;
 
-use iced::futures::channel::mpsc;
-use iced::futures::SinkExt;
-
 use iced::*;
 use iced::widget::{*, column};
+
+use iced::futures::channel::mpsc;
+use iced::futures::SinkExt;
 
 use crate::error_async;
 use crate::ffmpeg::{self, ConversionInput};
@@ -14,6 +14,8 @@ use crate::ffmpeg::{self, ConversionInput};
 pub struct ConversionState {
     pub converting: bool,
     pub progress: f32,
+
+    // for communicating with the conversion subscription
     pub channel: Option<mpsc::Sender<ConversionInput>>,
 
     // we make a copy so that the user can still freely change the timestamps while the conversion is happening
@@ -168,6 +170,19 @@ fn validate_state(state: &State) -> Vec<String> {
 }
 
 impl State {
+    // set all the necessary fields when a conversion begins
+    fn start_conversion_state(&mut self) {
+        self.conversion.converting = true;
+        self.conversion.from = self.from.clone();
+        self.conversion.to = self.to.clone();
+    }
+
+    // reset the state after a conversion has finished
+    fn reset_conversion_state(&mut self) {
+        self.conversion.converting = false;
+        self.conversion.progress = 0.0;
+    }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // dummy message
@@ -218,8 +233,7 @@ impl State {
                 Task::none()
             }
             Message::SubscriptionFinished => {
-                self.conversion.converting = false;
-                self.conversion.progress = 0.0;
+                self.reset_conversion_state();
                 Task::none()
             }
 
@@ -305,12 +319,12 @@ impl State {
                 // get the selected file path
                 let output_file = file.path().to_string_lossy().to_string();
                 
+                // send a message to the subscription to start the conversion with ffmpeg
                 let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the SubscriptionReady message");
                 let state = self.clone();
+
+                self.start_conversion_state();
                 
-                self.conversion.converting = true;
-                self.conversion.from = self.from.clone();
-                self.conversion.to = self.to.clone();
                 Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::None)
             }
         }
