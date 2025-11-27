@@ -4,7 +4,7 @@ use std::fmt::Display;
 pub fn show_error<T: Display>(error: T) {
     rfd::MessageDialog::new()
         .set_buttons(rfd::MessageButtons::Ok)
-        .set_description(format!("{error}"))
+        .set_description(error.to_string())
         .set_level(rfd::MessageLevel::Error)
         .set_title("ERROR")
         .show();
@@ -14,7 +14,7 @@ pub fn show_error<T: Display>(error: T) {
 pub async fn show_error_async<T: Display>(error: T) {
     rfd::AsyncMessageDialog::new()
         .set_buttons(rfd::MessageButtons::Ok)
-        .set_description(format!("{error}"))
+        .set_description(error.to_string())
         .set_level(rfd::MessageLevel::Error)
         .set_title("ERROR")
         .show()
@@ -25,7 +25,7 @@ pub async fn show_error_async<T: Display>(error: T) {
 #[macro_export]
 macro_rules! error {
     ($err:expr) => {
-        crate::error::show_error(format!($err))
+        $crate::error::show_error(format!($err))
     };
 }
 
@@ -33,6 +33,6 @@ macro_rules! error {
 #[macro_export]
 macro_rules! error_async {
     ($err:expr) => {
-        iced::Task::perform(crate::error::show_error_async(format!($err)), |_| crate::ui::Message::None)
+        iced::Task::perform($crate::error::show_error_async(format!($err)), |_| $crate::ui::Message::None)
     };
 }
