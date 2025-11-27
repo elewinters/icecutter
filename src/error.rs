@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+// shows an error using an OS native dialog
 pub fn show_error<T: Display>(error: T) {
     rfd::MessageDialog::new()
         .set_buttons(rfd::MessageButtons::Ok)
@@ -18,4 +19,20 @@ pub async fn show_error_async<T: Display>(error: T) {
         .set_title("ERROR")
         .show()
         .await;
+}
+
+// shows an error to the user synchronously
+#[macro_export]
+macro_rules! error {
+    ($err:expr) => {
+        crate::error::show_error(format!($err))
+    };
+}
+
+// returns a task that runs show_error_async
+#[macro_export]
+macro_rules! error_async {
+    ($err:expr) => {
+        iced::Task::perform(crate::error::show_error_async(format!($err)), |_| crate::ui::Message::None)
+    };
 }

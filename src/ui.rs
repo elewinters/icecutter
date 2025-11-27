@@ -7,7 +7,7 @@ use iced::futures::SinkExt;
 use iced::*;
 use iced::widget::{*, column};
 
-use crate::error;
+use crate::error_async;
 use crate::ffmpeg;
 
 use ffmpeg::ConversionInput;
@@ -202,10 +202,9 @@ impl State {
                 self.conversion.channel = Some(sender);
                 Task::none()
             }
-            Message::SubscriptionError(err) => Task::perform(
-                error::show_error_async(format!("ffmpeg error: {err}")), 
-                |_| Message::None
-            ),
+
+            Message::SubscriptionError(err) => error_async!("ffmpeg error: {err}"),
+
             Message::SubscriptionProgress(mut progress) => {
                 if progress == "N/A" {
                     return Task::none();
@@ -247,7 +246,7 @@ impl State {
                 // initialize state based on selected file
                 let state = match initialize_state(&path) {
                     Ok(x) => x,
-                    Err(err) => return Task::perform(error::show_error_async(format!("failed to initialize state: {err}")), |_| Message::None)
+                    Err(err) => return error_async!("failed to initialize state: {err}")
                 };
 
                 *self = State {
@@ -266,27 +265,27 @@ impl State {
                 // in which case if the user inputted a non-video into that field, ffmpeg would error out
                 let length = match initialize_state(&path.to_string_lossy()) {
                     Ok(state) => state.to,
-                    Err(err) => return Task::perform(error::show_error_async(format!("invalid input file: {err}")), |_| Message::None)
+                    Err(err) => return error_async!("invalid input file: {err}")
                 };
 
                 // additionally check if to timestamp is bigger than the video's length
                 if crate::timestamp_to_secs(&self.to) > crate::timestamp_to_secs(&length) {
-                    return Task::perform(error::show_error_async("'to' timestamp is longer than the video's duration".to_owned()), |_| Message::None);
+                    return error_async!("'to' timestamp is longer than the video's duration");
                 }
 
                 // and check if "from" is bigger than "to"
                 if crate::timestamp_to_secs(&self.from) > crate::timestamp_to_secs(&self.to) {
-                    return Task::perform(error::show_error_async("'from' timestamp is longer than the 'to' timestamp".to_owned()), |_| Message::None);
+                    return error_async!("'from' timestamp is longer than the 'to' timestamp");
                 }
 
                 // and check if the timestamps are the same
                 if crate::timestamp_to_secs(&self.from) == crate::timestamp_to_secs(&self.to) {
-                    return Task::perform(error::show_error_async("the 'from' and 'to' timestamps cannot be the same".to_owned()), |_| Message::None);
+                    return error_async!("the 'from' and 'to' timestamps cannot be the same");
                 }
 
                 let file_name = match path.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
-                    None => return Task::perform(error::show_error_async("invalid input file, failed to get file name from path"), |_| Message::None)
+                    None => return error_async!("invalid input file, failed to get file name from path")
                 };
 
                 Task::perform(

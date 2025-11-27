@@ -34,7 +34,7 @@ fn main() {
     // if initialization fails, fall back to default state
     let state = match file {
         Some(f) => ui::initialize_state(&f).unwrap_or_else(|err| {
-            error::show_error(format!("failed to initialize state: {err}"));
+            error!("failed to initialize state: {err}");
             ui::State::default()
         }),
         None => ui::State::default()
@@ -50,6 +50,6 @@ fn main() {
         .run_with(move || (state, iced::Task::none()));
     
     if let Err(err) = result {
-        error::show_error(format!("failed to initialize iced, something must've went very wrong: {err}"));
+        error!("failed to initialize iced, something must've went very wrong: {err}");
     }
 }
