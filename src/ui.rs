@@ -7,6 +7,8 @@ use iced::widget::{*, column};
 use iced::futures::channel::mpsc;
 use iced::futures::SinkExt;
 
+use arboard::Clipboard;
+
 use crate::error_async;
 use crate::ffmpeg::{self, ConversionInput};
 
@@ -23,16 +25,35 @@ pub struct ConversionState {
     pub to: String
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct State {
     pub from: String,
     pub to: String,
 
     pub file: String,
     pub fps: String,
+
     pub convert_720p: bool,
+    pub clipboard: bool,
 
     pub conversion: ConversionState
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            from: String::default(),
+            to: String::default(),
+
+            file: String::default(),
+            fps: String::default(),
+
+            convert_720p: true,
+            clipboard: true,
+            
+            conversion: ConversionState::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -44,11 +65,12 @@ pub enum Message {
     ChangeFile(String),
     ChangeFps(String),
     ChangeConvert720p(bool),
+    ChangeClipboard(bool),
 
     SubscriptionReady(mpsc::Sender<ConversionInput>),
     SubscriptionError(String),
     SubscriptionProgress(String),
-    SubscriptionFinished,
+    SubscriptionFinished(String),
 
     SelectDialog,
     SelectDialogFinished(Option<rfd::FileHandle>),
@@ -209,6 +231,10 @@ impl State {
                 self.convert_720p = convert;
                 Task::none()
             }
+            Message::ChangeClipboard(b) => {
+                self.clipboard = b;
+                Task::none()
+            }
 
             // conversion subscription messages
             Message::SubscriptionReady(sender) => {
@@ -232,7 +258,14 @@ impl State {
 
                 Task::none()
             }
-            Message::SubscriptionFinished => {
+            Message::SubscriptionFinished(path) => {
+                if self.clipboard {
+                    let mut clipboard = Clipboard::new().unwrap();
+
+                    let paths = [Path::new(&path)];
+                    clipboard.set().file_list(&paths).unwrap();
+                }
+                
                 self.reset_conversion_state();
                 Task::none()
             }
@@ -426,6 +459,10 @@ impl State {
                     checkbox("convert to 720p", self.convert_720p)
                         .on_toggle(Message::ChangeConvert720p),
 
+                    // copy to clipboard checkbox
+                    checkbox("copy to clipboard", self.clipboard)
+                        .on_toggle(Message::ChangeClipboard),
+                    
                     // errors
                     self.error_view(),
 

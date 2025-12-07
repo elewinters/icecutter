@@ -367,7 +367,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             }
 
             // no more messages from the progress channel, we have completed the operation
-            output.send(Message::SubscriptionFinished).await.unwrap();
+            output.send(Message::SubscriptionFinished(output_file)).await.unwrap();
         }
     })
 }

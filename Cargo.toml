@@ -5,6 +5,7 @@ rust-version = "1.91.0"
 edition = "2024"
 
 [dependencies]
+arboard = "3.6.1"
 iced = "0.13.1"
 rfd = "0.15.4"
 
