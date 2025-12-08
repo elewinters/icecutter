@@ -378,7 +378,7 @@ impl State {
 
         column![
             rule::horizontal(1),
-            text(format!("processing with ffmpeg: {percentage}%")),
+            text!("processing with ffmpeg: {percentage}%"),
             progress_bar(0.0..=max, self.conversion.progress)
                 .girth(15)
         ]
@@ -474,7 +474,7 @@ impl State {
                     .width(5),
 
                 container(
-                    text("ffmpeg version: ".to_owned() + &ffmpeg::program_version(ffmpeg::Program::Ffmpeg))
+                    text!("ffmpeg version: {}", ffmpeg::program_version(ffmpeg::Program::Ffmpeg))
                         .size(11)
                 ).padding(2),
             ],
