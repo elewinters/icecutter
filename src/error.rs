@@ -1,21 +1,20 @@
-use std::fmt::Display;
 use rfd::*;
 
 // shows an error using an OS native dialog
-pub fn show_error(error: impl Display) {
+pub fn show_error(error: impl Into<String>) {
     MessageDialog::new()
         .set_buttons(MessageButtons::Ok)
-        .set_description(error.to_string())
+        .set_description(error)
         .set_level(MessageLevel::Error)
         .set_title("ERROR")
         .show();
 }
 
 // same as show_error, only with an AyncMessageDialog instead of a MessageDialog
-pub async fn show_error_async(error: impl Display) {
+pub async fn show_error_async(error: impl Into<String>) {
     AsyncMessageDialog::new()
         .set_buttons(MessageButtons::Ok)
-        .set_description(error.to_string())
+        .set_description(error)
         .set_level(MessageLevel::Error)
         .set_title("ERROR")
         .show()
