@@ -57,15 +57,22 @@ impl Default for State {
 }
 
 #[derive(Debug, Clone)]
+pub enum StateMessage {
+    From(String),
+    To(String),
+
+    File(String),
+    Fps(String),
+
+    Lower720p(bool),
+    CopyClipboard(bool),
+}
+
+#[derive(Debug, Clone)]
 pub enum Message {
     None,
 
-    From(String),
-    To(String),
-    File(String),
-    Fps(String),
-    Lower720p(bool),
-    CopyClipboard(bool),
+    UpdateState(StateMessage),
 
     SubscriptionReady(mpsc::Sender<ConversionInput>),
     SubscriptionError(String),
@@ -211,29 +218,33 @@ impl State {
             Message::None => Task::none(),
 
             // state changes
-            Message::From(s) => {
-                self.from = s;
-                Task::none()
-            }
-            Message::To(s) => {
-                self.to = s;
-                Task::none()
-            }
-            Message::File(s) => {
-                self.file = s;
-                Task::none()
-            }
-            Message::Fps(s) => {
-                self.fps = s;
-                Task::none()
-            }
-            Message::Lower720p(b) => {
-                self.convert_720p = b;
-                Task::none()
-            }
-            Message::CopyClipboard(b) => {
-                self.clipboard = b;
-                Task::none()
+            Message::UpdateState(msg) => {
+                match msg {
+                    StateMessage::From(s) => {
+                        self.from = s;
+                        Task::none()
+                    }
+                    StateMessage::To(s) => {
+                        self.to = s;
+                        Task::none()
+                    }
+                    StateMessage::File(s) => {
+                        self.file = s;
+                        Task::none()
+                    }
+                    StateMessage::Fps(s) => {
+                        self.fps = s;
+                        Task::none()
+                    }
+                    StateMessage::Lower720p(b) => {
+                        self.convert_720p = b;
+                        Task::none()
+                    }
+                    StateMessage::CopyClipboard(b) => {
+                        self.clipboard = b;
+                        Task::none()
+                    }
+                }
             }
 
             // conversion subscription messages
@@ -427,11 +438,11 @@ impl State {
                     // from:to textboxes
                     row![
                         text_input("from", &self.from)
-                            .on_input(Message::From),
+                            .on_input(|s| Message::UpdateState(StateMessage::From(s))),
                         text("-")
                             .size(20),
                         text_input("to", &self.to)
-                            .on_input(Message::To),
+                            .on_input(|s| Message::UpdateState(StateMessage::To(s))),
                     ]
                     .spacing(10)
                     .width(150),
@@ -443,7 +454,7 @@ impl State {
                         Space::new(10, 0),
                         container(
                             text_input("input file", &self.file)
-                                .on_input(Message::File),
+                                .on_input(|s| Message::UpdateState(StateMessage::File(s))),
                         )
                         .width(300),
                     ],
@@ -451,17 +462,17 @@ impl State {
                     // fps
                     container(
                         text_input("fps", &self.fps)
-                            .on_input(Message::Fps),
+                            .on_input(|s| Message::UpdateState(StateMessage::Fps(s))),
                     )
                     .width(75),
                     
                     // 720p checkbox
                     checkbox("lower resolution to 720p", self.convert_720p)
-                        .on_toggle(Message::Lower720p),
+                        .on_toggle(|b| Message::UpdateState(StateMessage::Lower720p(b))),
 
                     // copy to clipboard checkbox
                     checkbox("copy to clipboard", self.clipboard)
-                        .on_toggle(Message::CopyClipboard),
+                        .on_toggle(|b| Message::UpdateState(StateMessage::CopyClipboard(b))),
                     
                     // errors
                     self.error_view(),
