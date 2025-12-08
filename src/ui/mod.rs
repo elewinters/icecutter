@@ -4,28 +4,13 @@ use std::result::Result;
 use iced::*;
 use iced::widget::{*, column};
 
-use iced::futures::channel::mpsc;
-use iced::futures::SinkExt;
-
-use arboard::Clipboard;
-
 use crate::error_async;
-use crate::ffmpeg::{self, ConversionInput};
+use crate::ffmpeg;
 
-#[derive(Default, Clone)]
-pub struct ConversionState {
-    pub converting: bool,
-    pub progress: f32,
+pub mod conversion;
+use conversion::*;
 
-    // for communicating with the conversion subscription
-    pub channel: Option<mpsc::Sender<ConversionInput>>,
-
-    // we make a copy so that the user can still freely change the timestamps while the conversion is happening
-    pub from: String,
-    pub to: String
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct State {
     pub from: String,
     pub to: String,
@@ -73,11 +58,7 @@ pub enum Message {
     None,
 
     UpdateState(StateMessage),
-
-    ConversionReady(mpsc::Sender<ConversionInput>),
-    ConversionError(String),
-    ConversionProgress(String),
-    ConversionFinished(PathBuf),
+    Conversion(ConversionMessage),
 
     SelectDialog,
     SelectDialogFinished(Option<rfd::FileHandle>),
@@ -190,19 +171,6 @@ fn validate_state(state: &State) -> Vec<String> {
 }
 
 impl State {
-    // set all the necessary fields when a conversion begins
-    fn start_conversion_state(&mut self) {
-        self.conversion.converting = true;
-        self.conversion.from = self.from.clone();
-        self.conversion.to = self.to.clone();
-    }
-
-    // reset the state after a conversion has finished
-    fn reset_conversion_state(&mut self) {
-        self.conversion.converting = false;
-        self.conversion.progress = 0.0;
-    }
-
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // dummy message
@@ -222,41 +190,10 @@ impl State {
                 };
 
                 Task::none()
-            }
+            },
 
-            // conversion subscription messages
-            Message::ConversionReady(sender) => {
-                self.conversion.channel = Some(sender);
-                Task::none()
-            }
-
-            Message::ConversionError(err) => error_async!("ffmpeg conversion error: {err}"),
-
-            Message::ConversionProgress(mut progress) => {
-                if progress == "N/A" {
-                    return Task::none();
-                }
-                
-                // remove hour
-                progress.remove(0);
-                progress.remove(0);
-                progress.remove(0);
-
-                self.conversion.progress = crate::timestamp_to_secs(&progress);
-
-                Task::none()
-            }
-
-            Message::ConversionFinished(path) => {
-                if self.clipboard {
-                    let mut clipboard = Clipboard::new().unwrap();
-
-                    clipboard.set().file_list(&[path]).unwrap();
-                }
-                
-                self.reset_conversion_state();
-                Task::none()
-            }
+            // conversion messages
+            Message::Conversion(msg) => self.conversion.update(msg),
 
             // ran upon clicking the select button
             Message::SelectDialog => Task::perform(
@@ -332,16 +269,11 @@ impl State {
                     return Task::none(); 
                 };
 
-                // get the selected file path
-                let output_file = file.path().to_path_buf();
-                
                 // send a message to the subscription to start the conversion with ffmpeg
-                let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the ConversionReady message");
+                let output_file = file.path().to_path_buf();
                 let state = self.clone();
 
-                self.start_conversion_state();
-                
-                Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Message::None)
+                Task::done(Message::Conversion(ConversionMessage::Begin(state, output_file)))
             }
         }
     }
@@ -365,26 +297,6 @@ impl State {
                 .collect::<Vec<Element<Message>>>()
         )
         .spacing(5)
-        .into()
-    }
-
-    fn progress_view(&self) -> Element<'_, Message> {
-        if !self.conversion.converting {
-            return space().into();
-        }
-
-        let max = crate::timestamp_to_secs(&self.conversion.to) - crate::timestamp_to_secs(&self.conversion.from);
-        let percentage = (self.conversion.progress / max * 100.0).floor();
-
-        column![
-            rule::horizontal(1),
-            text!("processing with ffmpeg: {percentage}%"),
-            progress_bar(0.0..=max, self.conversion.progress)
-                .girth(15)
-        ]
-        .align_x(Center)
-        .padding(5)
-        .spacing(10)
         .into()
     }
 
@@ -461,7 +373,7 @@ impl State {
                         }),
 
                     // progress bar
-                    self.progress_view()
+                    self.conversion.progress_view()
                 ]
                 .align_x(Center)
                 .padding(20)

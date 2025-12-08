@@ -22,6 +22,7 @@ use std::os::windows::process::CommandExt;
 
 use crate::ui::{self, Message};
 use crate::error;
+use crate::ui::conversion::ConversionMessage;
 
 pub enum Program {
     Ffmpeg,
@@ -296,7 +297,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
         let (msg_tx, mut msg_rx) = mpsc::channel(1024);
 
         // send the sender to the application
-        output.send(Message::ConversionReady(msg_tx)).await.unwrap();
+        output.send(Message::Conversion(ConversionMessage::Ready(msg_tx))).await.unwrap();
 
         loop {
             // await the Start message
@@ -305,18 +306,18 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             let child = match convert_process(&state, &output_file) {
                 Ok(x) => x,
                 Err(err) => { 
-                    output.send(Message::ConversionError(format!("failed to start ffmpeg process: {err}"))).await.unwrap();
+                    output.send(Message::Conversion(ConversionMessage::Error(format!("failed to start ffmpeg process: {err}")))).await.unwrap();
                     continue;
                 }
             };
 
             let Some(stdout) = child.stdout else {
-                output.send(Message::ConversionError("failed to capture standard output of ffmpeg process".to_owned())).await.unwrap();
+                output.send(Message::Conversion(ConversionMessage::Error("failed to capture standard output of ffmpeg process".to_owned()))).await.unwrap();
                 continue;
             };
 
             let Some(stderr) = child.stderr else {
-                output.send(Message::ConversionError("failed to capture standard error output of ffmpeg process".to_owned())).await.unwrap();
+                output.send(Message::Conversion(ConversionMessage::Error("failed to capture standard error output of ffmpeg process".to_owned()))).await.unwrap();
                 continue;
             };
 
@@ -363,13 +364,13 @@ pub fn conversion_subscription() -> impl Stream<Item = Message> {
             // read from progress channel, Ok means to send a subscription progress message, Err means to send a ConversionError message
             while let Some(input) = process_rx.next().await {
                 match input {
-                    Ok(progress) => output.send(Message::ConversionProgress(progress)).await.unwrap(),
-                    Err(err) => output.send(Message::ConversionError(err)).await.unwrap()
+                    Ok(progress) => output.send(Message::Conversion(ConversionMessage::Progress(progress))).await.unwrap(),
+                    Err(err) => output.send(Message::Conversion(ConversionMessage::Error(err))).await.unwrap()
                 }
             }
 
             // no more messages from the progress channel, we have completed the operation
-            output.send(Message::ConversionFinished(output_file)).await.unwrap();
+            output.send(Message::Conversion(ConversionMessage::Finished(output_file))).await.unwrap();
         }
     })
 }
