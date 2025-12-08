@@ -8,6 +8,7 @@
 )]
 
 use std::env;
+use std::path::Path;
 use std::time::Duration;
 
 use iced::window::Settings;
@@ -36,7 +37,7 @@ fn main() {
     // initialize state if file argument exists
     // if initialization fails, fall back to default state
     let state = match file {
-        Some(f) => ui::initialize_state(&f).unwrap_or_else(|err| {
+        Some(f) => ui::initialize_state(Path::new(&f)).unwrap_or_else(|err| {
             error!("failed to initialize state: {err}");
             ui::State::default()
         }),

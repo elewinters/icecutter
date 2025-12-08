@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::result::Result;
 
 use iced::*;
@@ -30,7 +30,7 @@ pub struct State {
     pub from: String,
     pub to: String,
 
-    pub file: String,
+    pub file: PathBuf,
     pub fps: String,
 
     pub lower_720p: bool,
@@ -45,7 +45,7 @@ impl Default for State {
             from: String::default(),
             to: String::default(),
 
-            file: String::default(),
+            file: PathBuf::default(),
             fps: String::default(),
 
             lower_720p: true,
@@ -77,7 +77,7 @@ pub enum Message {
     ConversionReady(mpsc::Sender<ConversionInput>),
     ConversionError(String),
     ConversionProgress(String),
-    ConversionFinished(String),
+    ConversionFinished(PathBuf),
 
     SelectDialog,
     SelectDialogFinished(Option<rfd::FileHandle>),
@@ -87,11 +87,7 @@ pub enum Message {
 }
 
 // initializes the state from a video file
-pub fn initialize_state(file: &str) -> Result<State, String> {
-    if !Path::new(file).exists() {
-        return Err(format!("file \"{file}\" does not exist"))
-    }
-
+pub fn initialize_state(file: &Path) -> Result<State, String> {
     let length = ffmpeg::video_length(file)
         .map_err(|err| format!("failed to get video length: {err}"))?;
 
@@ -106,7 +102,7 @@ pub fn initialize_state(file: &str) -> Result<State, String> {
         from: "00:00".to_owned(),
         to: length,
 
-        file: file.to_string(),
+        file: file.into(),
         fps,
 
         ..Default::default()
@@ -180,19 +176,14 @@ fn validate_state(state: &State) -> Vec<String> {
         errors.push("'to' timestamp can't be 00:00".to_owned());
     }
 
-    // check if input file field is empty
-    if state.file.is_empty() {
-        errors.push("'input file' field is empty".to_owned());
+    // check if input file exists
+    if !state.file.exists() {
+        errors.push("input file does not exist".to_owned());
     }
 
     // check if fps field is a valid number
     if state.fps.parse::<u32>().is_err() {
         errors.push("'fps' field is not a valid unsigned integer".to_owned())
-    }
-
-    // check if file exists
-    if !state.file.is_empty() && !Path::new(&state.file).exists() {
-        errors.push("input file does not exist".to_owned());
     }
 
     errors
@@ -223,7 +214,7 @@ impl State {
                     StateMessage::From(s) => self.from = s,
                     StateMessage::To(s) => self.to = s,
                     
-                    StateMessage::File(s) => self.file = s,
+                    StateMessage::File(s) => self.file = PathBuf::from(s),
                     StateMessage::Fps(s) => self.fps = s,
 
                     StateMessage::Lower720p(b) => self.lower_720p = b,
@@ -260,8 +251,7 @@ impl State {
                 if self.clipboard {
                     let mut clipboard = Clipboard::new().unwrap();
 
-                    let paths = [Path::new(&path)];
-                    clipboard.set().file_list(&paths).unwrap();
+                    clipboard.set().file_list(&[path]).unwrap();
                 }
                 
                 self.reset_conversion_state();
@@ -283,11 +273,8 @@ impl State {
                     return Task::none()
                 };
 
-                // get the selected file path
-                let path = file.path().to_string_lossy();
-
                 // initialize state based on selected file
-                let state = match initialize_state(&path) {
+                let state = match initialize_state(&file.path()) {
                     Ok(x) => x,
                     Err(err) => return error_async!("failed to initialize state: {err}")
                 };
@@ -301,12 +288,10 @@ impl State {
 
             // ran upon clicking the convert button
             Message::ConvertDialog => {
-                let path = Path::new(&self.file);
-
                 // check if input file is a valid video
                 // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
                 // in which case if the user inputted a non-video into that field, ffmpeg would error out
-                let length = match initialize_state(&path.to_string_lossy()) {
+                let length = match initialize_state(&self.file) {
                     Ok(state) => state.to,
                     Err(err) => return error_async!("invalid input file: {err}")
                 };
@@ -326,7 +311,7 @@ impl State {
                     return error_async!("the 'from' and 'to' timestamps cannot be the same");
                 }
 
-                let file_name = match path.file_name() {
+                let file_name = match self.file.file_name() {
                     Some(x) => format!("[converted] {}", x.to_string_lossy()),
                     None => return error_async!("invalid input file, failed to get file name from path")
                 };
@@ -348,7 +333,7 @@ impl State {
                 };
 
                 // get the selected file path
-                let output_file = file.path().to_string_lossy().to_string();
+                let output_file = file.path().to_path_buf();
                 
                 // send a message to the subscription to start the conversion with ffmpeg
                 let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the ConversionReady message");
@@ -440,7 +425,7 @@ impl State {
                             .on_press(Message::SelectDialog),
                         Space::new(10, 0),
                         container(
-                            text_input("input file", &self.file)
+                            text_input("input file", &self.file.to_string_lossy())
                                 .on_input(|s| Message::UpdateState(StateMessage::File(s))),
                         )
                         .width(300),

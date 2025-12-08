@@ -1,4 +1,5 @@
 use std::io::{self, BufRead, BufReader};
+use std::path::{Path, PathBuf};
 
 use std::env;
 use std::process::{exit, Child, Command, Stdio};
@@ -30,7 +31,7 @@ pub enum Program {
 pub enum ConversionInput {
     Start {
         state: ui::State,
-        output_file: String
+        output_file: PathBuf
     }
 }
 
@@ -38,7 +39,7 @@ pub enum ConversionInput {
 // if a global installaton is found in the user's PATH variable, it takes priority and gets returned, even if the bundled ffmpeg/ffprobe programs are present
 // if there's no global installation, we look for the bundled programs that should be in the same directory as icecutter
 // if neither are found, the program shows an error message and exits with an error code of 1
-fn program_path(program: Program) -> String {
+fn program_path(program: Program) -> PathBuf {
     // convert program to string depending on OS
     let program = match (program, cfg!(windows)) {
         (Program::Ffmpeg, true) => "ffmpeg.exe",
@@ -54,7 +55,7 @@ fn program_path(program: Program) -> String {
 
     // get path of specified program from PATH variable
     // returns Ok(path) if it was found or Err(()) if it wasn't
-    let env_path = || -> Result<String, ()> {
+    let env_path = || -> Result<PathBuf, ()> {
         // get PATH environment variable
         let Some(paths) = env::var_os("PATH") else {
             return Err(());
@@ -68,7 +69,7 @@ fn program_path(program: Program) -> String {
             // check if such path exists, and return it if it does
             // skip the bundled program path, as that counts too as being in the PATH for some reason (on windows anyway) 
             if path.exists() && path != exe_dir.join(program) {
-                return Ok(path.to_string_lossy().to_string());
+                return Ok(path);
             }
         }
 
@@ -77,23 +78,21 @@ fn program_path(program: Program) -> String {
 
     // get path of specified program in the same directory as icecutter (these are the files that are bundled in with icecutter in the zip file)
     // returns Ok(path) if it was found or Err(()) if it wasn't
-    let bundle_path = || -> Result<String, ()> {
+    let bundle_path = || -> Result<PathBuf, ()> {
         let path = exe_dir.join(program);
 
         if !path.exists() {
             return Err(())
         }
 
-        Ok(path.to_string_lossy().to_string())
+        Ok(path)
     };
 
     if let Ok(path) = env_path() {
-        println!("using global {program}: {path}");
         return path;
     }
 
     if let Ok(path) = bundle_path() {
-        println!("using bundled {program}: {path}");
         return path;
     }
 
@@ -104,11 +103,11 @@ fn program_path(program: Program) -> String {
 // specifically check if input file is a video file and not an audio file
 // this will return "true" for non-audio files like text files and executables and what not
 // but other checks will make sure that the input file is a valid video file through fps/length checks
-pub fn is_video(video: &str) -> bool {
+pub fn is_video(path: &Path) -> bool {
     let mut command = Command::new(program_path(Program::Ffprobe));
     command
         .arg("-i")
-        .arg(video)
+        .arg(path)
         .arg("-show_entries")
         .arg("stream=codec_type")
         .arg("-v")
@@ -156,12 +155,12 @@ pub fn program_version(program: Program) -> String {
 }
 
 // returns the length of the video in MM:SS format
-pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
+pub fn video_length(path: &Path) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
     let mut command = Command::new(program_path(Program::Ffprobe));
     command
         .arg("-i")
-        .arg(video)
+        .arg(path)
         .arg("-show_entries")
         .arg("format=duration")
         .arg("-v")
@@ -177,7 +176,7 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 
     // check if success
     if !output.status.success() {
-        return Err(format!("ffprobe command failed, is the input file '{video}' valid?").into());
+        return Err(format!("ffprobe command failed, is the input file '{}' valid?", path.display()).into());
     }
 
     // get output from command and split by : and . so that we can get only the minutes and seconds
@@ -185,7 +184,7 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
     let output: Vec<&str> = output.split(&[':', '.']).collect();
 
     if output.len() < 3 {
-        return Err(format!("failed to get duration of video, is the input file '{video}' valid?").into());
+        return Err(format!("failed to get duration of video, is the input file '{}' valid?", path.display()).into());
     }
 
     let minutes = &output[1];
@@ -195,11 +194,11 @@ pub fn video_length(video: &str) -> Result<String, Box<dyn Error>> {
 }
 
 // returns the FPS of the video
-pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
+pub fn video_fps(path: &Path) -> Result<String, Box<dyn Error>> {
     // ffprobe command to get FPS in FPS/1 format
     let mut command = Command::new(program_path(Program::Ffprobe)); 
     command.arg("-i")
-        .arg(video)
+        .arg(path)
         .arg("-select_streams")
         .arg("v")
         .arg("-show_entries")
@@ -216,7 +215,7 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 
     // check if success
     if !output.status.success() {
-        return Err(format!("ffprobe command failed, is the input file '{video}' valid?").into());
+        return Err(format!("ffprobe command failed, is the input file '{}' valid?", path.display()).into());
     }
 
     // get output from command
@@ -235,13 +234,15 @@ pub fn video_fps(video: &str) -> Result<String, Box<dyn Error>> {
 // expects sanitized input (correct from/to timestamps, valid FPS, etc.)
 // this is ran by conversion_subscription when the user asks to convert a video
 // the returned child process gets used to track the output
-pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
+pub fn convert_process(state: &ui::State, output: &Path) -> io::Result<Child> {
     // arg vec that we will push arguments into depending on the configuration
     let mut arguments: Vec<&str> = Vec::new();
 
     // input file
+    let input_file = state.file.to_string_lossy();
+
     arguments.push("-i");
-    arguments.push(&state.file);
+    arguments.push(&input_file);
 
     // display ffmpeg progress in a more computer friendly format
     arguments.push("-progress");
@@ -273,7 +274,8 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
     arguments.push("-y");
 
     // output file name
-    arguments.push(output);
+    let output_file = output.to_string_lossy();
+    arguments.push(&output_file);
 
     // run command
     let mut command = Command::new(program_path(Program::Ffmpeg));
