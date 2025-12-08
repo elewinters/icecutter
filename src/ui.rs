@@ -33,7 +33,7 @@ pub struct State {
     pub file: String,
     pub fps: String,
 
-    pub convert_720p: bool,
+    pub lower_720p: bool,
     pub clipboard: bool,
 
     pub conversion: ConversionState
@@ -48,7 +48,7 @@ impl Default for State {
             file: String::default(),
             fps: String::default(),
 
-            convert_720p: true,
+            lower_720p: true,
             clipboard: true,
             
             conversion: ConversionState::default(),
@@ -220,31 +220,17 @@ impl State {
             // state changes
             Message::UpdateState(msg) => {
                 match msg {
-                    StateMessage::From(s) => {
-                        self.from = s;
-                        Task::none()
-                    }
-                    StateMessage::To(s) => {
-                        self.to = s;
-                        Task::none()
-                    }
-                    StateMessage::File(s) => {
-                        self.file = s;
-                        Task::none()
-                    }
-                    StateMessage::Fps(s) => {
-                        self.fps = s;
-                        Task::none()
-                    }
-                    StateMessage::Lower720p(b) => {
-                        self.convert_720p = b;
-                        Task::none()
-                    }
-                    StateMessage::CopyClipboard(b) => {
-                        self.clipboard = b;
-                        Task::none()
-                    }
-                }
+                    StateMessage::From(s) => self.from = s,
+                    StateMessage::To(s) => self.to = s,
+                    
+                    StateMessage::File(s) => self.file = s,
+                    StateMessage::Fps(s) => self.fps = s,
+
+                    StateMessage::Lower720p(b) => self.lower_720p = b,
+                    StateMessage::CopyClipboard(b) => self.clipboard = b,
+                };
+
+                Task::none()
             }
 
             // conversion subscription messages
@@ -468,7 +454,7 @@ impl State {
                     .width(75),
                     
                     // 720p checkbox
-                    checkbox("lower resolution to 720p", self.convert_720p)
+                    checkbox("lower resolution to 720p", self.lower_720p)
                         .on_toggle(|b| Message::UpdateState(StateMessage::Lower720p(b))),
 
                     // copy to clipboard checkbox

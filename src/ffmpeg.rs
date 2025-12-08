@@ -253,7 +253,7 @@ pub fn convert_process(state: &ui::State, output: &str) -> io::Result<Child> {
     }
 
     // conversion to 720p
-    if state.convert_720p {
+    if state.lower_720p {
         arguments.extend_from_slice(&["-vf", "scale=-1:720"]);
     }
 
