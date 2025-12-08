@@ -274,7 +274,7 @@ impl State {
                 };
 
                 // initialize state based on selected file
-                let state = match initialize_state(&file.path()) {
+                let state = match initialize_state(file.path()) {
                     Ok(x) => x,
                     Err(err) => return error_async!("failed to initialize state: {err}")
                 };
