@@ -60,12 +60,12 @@ impl Default for State {
 pub enum Message {
     None,
 
-    ChangeFrom(String),
-    ChangeTo(String),
-    ChangeFile(String),
-    ChangeFps(String),
-    ChangeConvert720p(bool),
-    ChangeClipboard(bool),
+    From(String),
+    To(String),
+    File(String),
+    Fps(String),
+    Lower720p(bool),
+    CopyClipboard(bool),
 
     SubscriptionReady(mpsc::Sender<ConversionInput>),
     SubscriptionError(String),
@@ -211,27 +211,27 @@ impl State {
             Message::None => Task::none(),
 
             // state changes
-            Message::ChangeFrom(from) => {
-                self.from = from;
+            Message::From(s) => {
+                self.from = s;
                 Task::none()
             }
-            Message::ChangeTo(to) => {
-                self.to = to;
+            Message::To(s) => {
+                self.to = s;
                 Task::none()
             }
-            Message::ChangeFile(file) => {
-                self.file = file;
+            Message::File(s) => {
+                self.file = s;
                 Task::none()
             }
-            Message::ChangeFps(fps) => {
-                self.fps = fps;
+            Message::Fps(s) => {
+                self.fps = s;
                 Task::none()
             }
-            Message::ChangeConvert720p(convert) => {
-                self.convert_720p = convert;
+            Message::Lower720p(b) => {
+                self.convert_720p = b;
                 Task::none()
             }
-            Message::ChangeClipboard(b) => {
+            Message::CopyClipboard(b) => {
                 self.clipboard = b;
                 Task::none()
             }
@@ -427,11 +427,11 @@ impl State {
                     // from:to textboxes
                     row![
                         text_input("from", &self.from)
-                            .on_input(Message::ChangeFrom),
+                            .on_input(Message::From),
                         text("-")
                             .size(20),
                         text_input("to", &self.to)
-                            .on_input(Message::ChangeTo),
+                            .on_input(Message::To),
                     ]
                     .spacing(10)
                     .width(150),
@@ -443,7 +443,7 @@ impl State {
                         Space::new(10, 0),
                         container(
                             text_input("input file", &self.file)
-                                .on_input(Message::ChangeFile),
+                                .on_input(Message::File),
                         )
                         .width(300),
                     ],
@@ -451,17 +451,17 @@ impl State {
                     // fps
                     container(
                         text_input("fps", &self.fps)
-                            .on_input(Message::ChangeFps),
+                            .on_input(Message::Fps),
                     )
                     .width(75),
                     
                     // 720p checkbox
-                    checkbox("convert to 720p", self.convert_720p)
-                        .on_toggle(Message::ChangeConvert720p),
+                    checkbox("lower resolution to 720p", self.convert_720p)
+                        .on_toggle(Message::Lower720p),
 
                     // copy to clipboard checkbox
                     checkbox("copy to clipboard", self.clipboard)
-                        .on_toggle(Message::ChangeClipboard),
+                        .on_toggle(Message::CopyClipboard),
                     
                     // errors
                     self.error_view(),
