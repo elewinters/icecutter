@@ -351,7 +351,7 @@ impl State {
         let errors = validate_state(self);
         
         if errors.is_empty() {
-            return Space::new(0, 0).into();
+            return space().into();
         }
 
         column(
@@ -370,17 +370,17 @@ impl State {
 
     fn progress_view(&self) -> Element<'_, Message> {
         if !self.conversion.converting {
-            return Space::new(0, 0).into();
+            return space().into();
         }
 
         let max = crate::timestamp_to_secs(&self.conversion.to) - crate::timestamp_to_secs(&self.conversion.from);
         let percentage = (self.conversion.progress / max * 100.0).floor();
 
         column![
-            horizontal_rule(1),
+            rule::horizontal(1),
             text(format!("processing with ffmpeg: {percentage}%")),
             progress_bar(0.0..=max, self.conversion.progress)
-                .height(15)
+                .girth(15)
         ]
         .align_x(Center)
         .padding(5)
@@ -397,15 +397,14 @@ impl State {
                     column![
                         text("icecutter v1.3.2")
                             .size(30),
-                        text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration")
-                            .center(),
+                        text("takes a video file, cuts it, and then compresses it down to 10MB or less with the specified configuration"),
                         text("primarly built for quickly cutting and compressing clips to upload to discord")
                             .size(12)
                     ]
                     .spacing(5),
 
                     // separator
-                    horizontal_rule(1),
+                    rule::horizontal(1),
 
                     // from:to textboxes
                     row![
@@ -423,7 +422,10 @@ impl State {
                     row![
                         button("select")
                             .on_press(Message::SelectDialog),
-                        Space::new(10, 0),
+
+                        space()
+                            .width(10),
+                            
                         container(
                             text_input("input file", &self.file.to_string_lossy())
                                 .on_input(|s| Message::UpdateState(StateMessage::File(s))),
@@ -439,11 +441,13 @@ impl State {
                     .width(75),
                     
                     // 720p checkbox
-                    checkbox("lower resolution to 720p", self.lower_720p)
+                    checkbox(self.lower_720p)
+                        .label("lower resolution to 720p")
                         .on_toggle(|b| Message::UpdateState(StateMessage::Lower720p(b))),
 
                     // copy to clipboard checkbox
-                    checkbox("copy to clipboard", self.clipboard)
+                    checkbox(self.clipboard)
+                        .label("copy to clipboard")
                         .on_toggle(|b| Message::UpdateState(StateMessage::CopyClipboard(b))),
                     
                     // errors
@@ -466,7 +470,9 @@ impl State {
 
             // ffmpeg version at the bottom left
             row![
-                Space::new(10, 0),
+                space()
+                    .width(10),
+
                 container(
                     text("ffmpeg version: ".to_owned() + &ffmpeg::program_version(ffmpeg::Program::Ffmpeg))
                         .size(11)

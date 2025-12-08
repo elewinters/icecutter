@@ -291,7 +291,7 @@ pub fn convert_process(state: &ui::State, output: &Path) -> io::Result<Child> {
 }
 
 pub fn conversion_subscription() -> impl Stream<Item = Message> {
-    stream::channel(100, |mut output| async move {
+    stream::channel(100, async |mut output| {
         // create channel for the application to communicate with the subscription
         let (msg_tx, mut msg_rx) = mpsc::channel(1024);
 
