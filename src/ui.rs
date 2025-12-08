@@ -477,8 +477,8 @@ impl State {
                     self.progress_view()
                 ]
                 .align_x(Center)
-                .padding(25)
-                .spacing(10)
+                .padding(20)
+                .spacing(8)
             ),
 
             // ffmpeg version at the bottom left
@@ -490,7 +490,6 @@ impl State {
                 ).padding(2),
             ],
 
-            Space::new(0, 5)
         ])
     }
 
