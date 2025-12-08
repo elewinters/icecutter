@@ -74,10 +74,10 @@ pub enum Message {
 
     UpdateState(StateMessage),
 
-    SubscriptionReady(mpsc::Sender<ConversionInput>),
-    SubscriptionError(String),
-    SubscriptionProgress(String),
-    SubscriptionFinished(String),
+    ConversionReady(mpsc::Sender<ConversionInput>),
+    ConversionError(String),
+    ConversionProgress(String),
+    ConversionFinished(String),
 
     SelectDialog,
     SelectDialogFinished(Option<rfd::FileHandle>),
@@ -248,14 +248,14 @@ impl State {
             }
 
             // conversion subscription messages
-            Message::SubscriptionReady(sender) => {
+            Message::ConversionReady(sender) => {
                 self.conversion.channel = Some(sender);
                 Task::none()
             }
 
-            Message::SubscriptionError(err) => error_async!("ffmpeg error: {err}"),
+            Message::ConversionError(err) => error_async!("ffmpeg conversion error: {err}"),
 
-            Message::SubscriptionProgress(mut progress) => {
+            Message::ConversionProgress(mut progress) => {
                 if progress == "N/A" {
                     return Task::none();
                 }
@@ -269,7 +269,8 @@ impl State {
 
                 Task::none()
             }
-            Message::SubscriptionFinished(path) => {
+
+            Message::ConversionFinished(path) => {
                 if self.clipboard {
                     let mut clipboard = Clipboard::new().unwrap();
 
@@ -364,7 +365,7 @@ impl State {
                 let output_file = file.path().to_string_lossy().to_string();
                 
                 // send a message to the subscription to start the conversion with ffmpeg
-                let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the SubscriptionReady message");
+                let mut sender = self.conversion.channel.clone().expect("channel has already been in initialized with the ConversionReady message");
                 let state = self.clone();
 
                 self.start_conversion_state();
