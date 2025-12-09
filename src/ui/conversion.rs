@@ -47,9 +47,12 @@ impl ConversionState {
     }
 
     // reset the state after a conversion has finished
+    // we reset everything except for the channel we use to communicate with the conversion subscription
     fn reset(&mut self) {
-        self.converting = false;
-        self.progress = 0.0;
+        *self = ConversionState {
+            channel: self.channel.clone(),
+            ..Default::default()
+        };
     }
 }
 
