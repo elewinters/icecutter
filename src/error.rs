@@ -33,6 +33,6 @@ macro_rules! error {
 #[macro_export]
 macro_rules! error_async {
     ($err:expr) => {
-        iced::Task::perform($crate::error::show_error_async(format!($err)), |_| $crate::ui::Message::None)
+        iced::Task::perform($crate::error::show_error_async(format!($err)), |_| $crate::ui::Action::None)
     };
 }

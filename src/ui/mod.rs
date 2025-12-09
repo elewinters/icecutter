@@ -4,11 +4,15 @@ use std::result::Result;
 use iced::*;
 use iced::widget::{*, column};
 
-use crate::error_async;
 use crate::ffmpeg;
 
 pub mod conversion;
 use conversion::*;
+
+mod dialog;
+use dialog::DialogMessage;
+
+mod validation;
 
 #[derive(Debug, Clone)]
 pub struct State {
@@ -51,20 +55,17 @@ pub enum StateMessage {
 
     Lower720p(bool),
     CopyClipboard(bool),
+
+    NewState(State)
 }
 
 #[derive(Debug, Clone)]
-pub enum Message {
+pub enum Action {
     None,
 
     UpdateState(StateMessage),
     Conversion(ConversionMessage),
-
-    SelectDialog,
-    SelectDialogFinished(Option<rfd::FileHandle>),
-
-    ConvertDialog,
-    ConvertDialogFinished(Option<rfd::FileHandle>),
+    Dialog(DialogMessage)
 }
 
 // initializes the state from a video file
@@ -90,94 +91,14 @@ pub fn initialize_state(file: &Path) -> Result<State, String> {
     })
 }
 
-// checks if the from/to timestamps are valid
-fn validate_timestamp(timestamp: &str) -> bool {
-    // an empty timestamp is also valid
-    if timestamp.is_empty() {
-        return true;
-    }
-
-    let split: Vec<&str> = timestamp.split(':').collect();
-
-    let minutes = split.first();
-    let seconds = split.get(1);
-
-    // return false if we have more than one colon
-    if split.len() > 2 {
-        return false
-    }
-
-    // if minutes and seconds exist and if they're both valid u32 integers that arent greater than 59, we return true
-    match (minutes, seconds) {
-        (Some(x), Some(y)) => {
-            let Ok(minutes) = x.parse::<u32>() else {
-                return false
-            };
-
-            let Ok(seconds) = y.parse::<u32>() else {
-                return false
-            };
-
-            if minutes > 59 || seconds > 59 {
-                return false
-            }
-
-            true
-        }
-        _ => false
-    }
-}
-
-// checks if all of the input values are valid, and returns a vector of string errors
-// if the state is valid, then an empty vector is returned
-fn validate_state(state: &State) -> Vec<String> {
-    let mut errors = Vec::new();
-
-    // check if only one of the timestamps is filled and throw an error
-    if state.to.is_empty() && !state.from.is_empty() {
-        errors.push("'to' timestamp is empty, while the 'from' timestamp is not".to_owned());
-    }
-
-    if state.from.is_empty() && !state.to.is_empty() {
-        errors.push("'from' timestamp is empty, while the 'to' timestamp is not".to_owned());
-    }
-
-    // check if both timestamps are in the proper format
-    // if one of these is empty it will also return true
-    if !validate_timestamp(&state.from) {
-        errors.push("'from' timestamp is not in a valid MM:SS format".to_owned());
-    }
-
-    if !validate_timestamp(&state.to) {
-        errors.push("'to' timestamp is not in a valid MM:SS format".to_owned());
-    }
-
-    // check if "to" timestamp isn't 00:00
-    if state.to == "00:00" || state.to == "0:00" || state.to == "00:0" || state.to == "0:0" {
-        errors.push("'to' timestamp can't be 00:00".to_owned());
-    }
-
-    // check if input file exists
-    if !state.file.exists() {
-        errors.push("input file does not exist".to_owned());
-    }
-
-    // check if fps field is a valid number
-    if state.fps.parse::<u32>().is_err() {
-        errors.push("'fps' field is not a valid unsigned integer".to_owned())
-    }
-
-    errors
-}
-
 impl State {
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Action) -> Task<Action> {
         match message {
             // dummy message
-            Message::None => Task::none(),
+            Action::None => Task::none(),
 
             // state changes
-            Message::UpdateState(msg) => {
+            Action::UpdateState(msg) => {
                 match msg {
                     StateMessage::From(s) => self.from = s,
                     StateMessage::To(s) => self.to = s,
@@ -187,121 +108,27 @@ impl State {
 
                     StateMessage::Lower720p(b) => self.lower_720p = b,
                     StateMessage::CopyClipboard(b) => self.clipboard = b,
+
+                    // let's keep our conversion state
+                    StateMessage::NewState(state) => *self = State {
+                        conversion: self.conversion.clone(),
+                        ..state
+                    }
                 };
 
                 Task::none()
             },
 
             // conversion messages
-            Message::Conversion(msg) => self.conversion.update(msg),
+            Action::Conversion(msg) => conversion::update(&mut self.conversion, msg),
 
-            // ran upon clicking the select button
-            Message::SelectDialog => Task::perform(
-                rfd::AsyncFileDialog::new()
-                    .set_title("select video to convert")
-                    .pick_file(),
-                Message::SelectDialogFinished // once the file dialog task is over, run this message
-            ),
-
-            // ran when the select file dialog has finished
-            Message::SelectDialogFinished(file_opt) => {
-                // get filehandle if a file was successfully picked
-                let Some(file) = file_opt else {
-                    return Task::none()
-                };
-
-                // initialize state based on selected file
-                let state = match initialize_state(file.path()) {
-                    Ok(x) => x,
-                    Err(err) => return error_async!("failed to initialize state: {err}")
-                };
-
-                *self = State {
-                    conversion: self.conversion.clone(),
-                    ..state
-                };
-                Task::none()
-            }
-
-            // ran upon clicking the convert button
-            Message::ConvertDialog => {
-                // check if input file is a valid video
-                // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
-                // in which case if the user inputted a non-video into that field, ffmpeg would error out
-                let length = match initialize_state(&self.file) {
-                    Ok(state) => state.to,
-                    Err(err) => return error_async!("invalid input file: {err}")
-                };
-
-                // additionally check if to timestamp is bigger than the video's length
-                if crate::timestamp_to_secs(&self.to) > crate::timestamp_to_secs(&length) {
-                    return error_async!("'to' timestamp is longer than the video's duration");
-                }
-
-                // and check if "from" is bigger than "to"
-                if crate::timestamp_to_secs(&self.from) > crate::timestamp_to_secs(&self.to) {
-                    return error_async!("'from' timestamp is longer than the 'to' timestamp");
-                }
-
-                // and check if the timestamps are the same
-                if crate::timestamp_to_secs(&self.from) == crate::timestamp_to_secs(&self.to) {
-                    return error_async!("the 'from' and 'to' timestamps cannot be the same");
-                }
-
-                let file_name = match self.file.file_name() {
-                    Some(x) => format!("[converted] {}", x.to_string_lossy()),
-                    None => return error_async!("invalid input file, failed to get file name from path")
-                };
-
-                Task::perform(
-                    rfd::AsyncFileDialog::new()
-                        .set_title("save converted video")
-                        .set_file_name(file_name)
-                        .save_file(),
-                    Message::ConvertDialogFinished // once the file dialog task is over, run this message
-                )
-            }
-
-            // ran when the convert file dialog has finished
-            Message::ConvertDialogFinished(file_opt) => {
-                // get filehandle if a file was successfully picked
-                let Some(file) = file_opt else {
-                    return Task::none(); 
-                };
-
-                // send a message to the subscription to start the conversion with ffmpeg
-                let output_file = file.path().to_path_buf();
-                let state = self.clone();
-
-                Task::done(Message::Conversion(ConversionMessage::Begin(state, output_file)))
-            }
+            // file dialog messages
+            Action::Dialog(msg) => dialog::update(self, msg)
         }
-    }
-
-    // view responsible for showing error messages above the convert button
-    fn error_view(&self) -> Element<'_, Message> {
-        let errors = validate_state(self);
-        
-        if errors.is_empty() {
-            return space().into();
-        }
-
-        column(
-            errors.into_iter()
-                .map(|error| {
-                    text(error)
-                        .color(Color::from_rgb(1.0, 0.0, 0.0))
-                        .size(12)
-                        .into()
-                })
-                .collect::<Vec<Element<Message>>>()
-        )
-        .spacing(5)
-        .into()
     }
 
     // main view
-    pub fn view(&self) -> Container<'_, Message> {
+    pub fn view(&self) -> Container<'_, Action> {
         container(column![
             center(
                 column![
@@ -321,11 +148,11 @@ impl State {
                     // from:to textboxes
                     row![
                         text_input("from", &self.from)
-                            .on_input(|s| Message::UpdateState(StateMessage::From(s))),
+                            .on_input(|s| Action::UpdateState(StateMessage::From(s))),
                         text("-")
                             .size(20),
                         text_input("to", &self.to)
-                            .on_input(|s| Message::UpdateState(StateMessage::To(s))),
+                            .on_input(|s| Action::UpdateState(StateMessage::To(s))),
                     ]
                     .spacing(10)
                     .width(150),
@@ -333,14 +160,14 @@ impl State {
                     // input file
                     row![
                         button("select")
-                            .on_press(Message::SelectDialog),
+                            .on_press(Action::Dialog(DialogMessage::Select)),
 
                         space()
                             .width(10),
                             
                         container(
                             text_input("input file", &self.file.to_string_lossy())
-                                .on_input(|s| Message::UpdateState(StateMessage::File(s))),
+                                .on_input(|s| Action::UpdateState(StateMessage::File(s))),
                         )
                         .width(300),
                     ],
@@ -348,32 +175,32 @@ impl State {
                     // fps
                     container(
                         text_input("fps", &self.fps)
-                            .on_input(|s| Message::UpdateState(StateMessage::Fps(s))),
+                            .on_input(|s| Action::UpdateState(StateMessage::Fps(s))),
                     )
                     .width(75),
                     
                     // 720p checkbox
                     checkbox(self.lower_720p)
                         .label("lower resolution to 720p")
-                        .on_toggle(|b| Message::UpdateState(StateMessage::Lower720p(b))),
+                        .on_toggle(|b| Action::UpdateState(StateMessage::Lower720p(b))),
 
                     // copy to clipboard checkbox
                     checkbox(self.clipboard)
                         .label("copy to clipboard")
-                        .on_toggle(|b| Message::UpdateState(StateMessage::CopyClipboard(b))),
+                        .on_toggle(|b| Action::UpdateState(StateMessage::CopyClipboard(b))),
                     
                     // errors
-                    self.error_view(),
+                    validation::error_view(self),
 
                     // convert button
                     button("convert")
-                        .on_press_maybe(match (validate_state(self).is_empty(), self.conversion.converting) {
-                            (true, false) => Some(Message::ConvertDialog),
+                        .on_press_maybe(match (validation::validate_state(self).is_empty(), self.conversion.converting) {
+                            (true, false) => Some(Action::Dialog(DialogMessage::Convert)),
                             _ => None
                         }),
 
                     // progress bar
-                    self.conversion.progress_view()
+                    conversion::progress_view(&self.conversion)
                 ]
                 .align_x(Center)
                 .padding(20)
@@ -396,7 +223,7 @@ impl State {
         ])
     }
 
-    pub fn subscription(&self) -> Subscription<Message> {
+    pub fn subscription(&self) -> Subscription<Action> {
         Subscription::run(ffmpeg::conversion_subscription)
     }
 }
