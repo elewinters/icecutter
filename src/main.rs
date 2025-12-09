@@ -16,6 +16,7 @@ use iced::window::Settings;
 mod ui;
 mod error;
 mod ffmpeg;
+mod timestamp;
 
 // accepts a time stamp in MM:SS format and returns the amount of seconds it represents
 pub fn timestamp_to_secs(timestamp: &str) -> f32 {
