@@ -176,19 +176,10 @@ pub fn video_length(path: &Path) -> Result<Timestamp, Box<dyn Error>> {
         return Err(format!("ffprobe command failed, is the input file '{}' valid?", path.display()).into());
     }
 
-    // get output from command and split by : and . so that we can get only the minutes and seconds
+    // get output, this should be a timestamp in HH:MM:SS format
     let output = String::from_utf8_lossy(&output.stdout);
-    let output: Vec<&str> = output.split(&[':', '.']).collect();
 
-    if output.len() < 3 {
-        return Err(format!("failed to get duration of video, is the input file '{}' valid?", path.display()).into());
-    }
-
-    let hours = &output[0];
-    let minutes = &output[1];
-    let seconds = &output[2];
-
-    Timestamp::new(&format!("{hours}:{minutes}:{seconds}"))
+    Timestamp::new(&output)
 }
 
 // returns the FPS of the video

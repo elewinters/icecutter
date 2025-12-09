@@ -15,6 +15,8 @@ impl Timestamp {
     // make a new time stamp from a correctly formatted HH:MM:SS string
     // MM:SS or just SS is supported too
     pub fn new(timestamp: &str) -> Result<Timestamp, Box<dyn Error>> {
+        // can't forget to trim!
+        let timestamp = timestamp.trim();
         let split: Vec<&str> = timestamp.split(':').collect();
 
         // an empty timestamp is also valid
