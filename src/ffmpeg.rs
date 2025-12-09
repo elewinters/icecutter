@@ -9,6 +9,7 @@ use std::error::Error;
 use iced::stream;
 use iced::futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 
+use crate::timestamp::Timestamp;
 use crate::ui::{self, Action};
 use crate::error;
 use crate::ui::conversion::ConversionMessage;
@@ -153,7 +154,7 @@ pub fn program_version(program: Program) -> String {
 }
 
 // returns the length of the video in MM:SS format
-pub fn video_length(path: &Path) -> Result<String, Box<dyn Error>> {
+pub fn video_length(path: &Path) -> Result<Timestamp, Box<dyn Error>> {
     // ffprobe command to get video length in HOURS:MM:SS.MICROSECONDS format
     let mut command = Command::new(program_path(Program::Ffprobe));
     command
@@ -185,10 +186,11 @@ pub fn video_length(path: &Path) -> Result<String, Box<dyn Error>> {
         return Err(format!("failed to get duration of video, is the input file '{}' valid?", path.display()).into());
     }
 
+    let hours = &output[0];
     let minutes = &output[1];
     let seconds = &output[2];
 
-    Ok(format!("{minutes}:{seconds}"))
+    Ok(Timestamp::new(&format!("{hours}:{minutes}:{seconds}"))?)
 }
 
 // returns the FPS of the video
@@ -247,8 +249,11 @@ pub fn convert_process(state: &ui::State, output: &Path) -> io::Result<Child> {
     arguments.push("pipe:1");
 
     // cutting
+    let from = state.from.to_string();
+    let to = state.to.to_string();
+
     if !state.from.is_empty() && !state.to.is_empty() {
-        arguments.extend_from_slice(&["-ss", &state.from, "-to", &state.to]);
+        arguments.extend_from_slice(&["-ss", &from, "-to", &to]);
     }
 
     // conversion to 720p

@@ -4,10 +4,11 @@ use std::time::Duration;
 
 // a time stamp with hours, minutes and seconds
 // can be empty but not invalid
+#[derive(Default, Clone, Debug)]
 pub struct Timestamp {
-    hours: Option<u64>,
+    hours: Option<u8>,
     minutes: Option<u8>,
-    seconds: Option<u8>
+    seconds: Option<f32>
 }
 
 impl Timestamp {
@@ -37,10 +38,15 @@ impl Timestamp {
             let mut seconds = None;
 
             for (i, v) in split.iter().rev().enumerate() {
-                match i {
-                    0 => seconds = Some(v.parse::<u8>()?),
-                    1 => minutes = Some(v.parse::<u8>()?),
-                    2 => hours = Some(v.parse::<u64>()?),
+                match (i, v.is_empty()) {
+                    (0, false) => seconds = Some(v.parse::<f32>()?.round()),
+                    (1, false) => minutes = Some(v.parse::<u8>()?),
+                    (2, false) => hours = Some(v.parse::<u8>()?),
+
+                    (0, true) => seconds = Some(0.0),
+                    (1, true) => minutes = Some(0),
+                    (2, true) => hours = Some(0),
+
                     _ => unreachable!()
                 }
             }
@@ -53,19 +59,17 @@ impl Timestamp {
             return Err("a minute cannot be longer than 59 seconds".into());
         }
 
-        if let Some(seconds) = seconds && seconds > 59 {
+        if let Some(seconds) = seconds && seconds > 59.0 {
             return Err("a second cannot be longer than 59 seconds".into());
         }
         
-        println!("hours: {:?}, minutes: {:?}, seconds: {:?}", hours, minutes, seconds);
-
         Ok(Timestamp { hours, minutes, seconds })
     }
 
     // gets the total amount of seconds that the timestamp represents
     pub fn total_secs(&self) -> f32 {
         (
-            Duration::from_hours(self.hours.unwrap_or_default()) + 
+            Duration::from_hours(self.hours.unwrap_or_default() as u64) + 
             Duration::from_mins(self.minutes.unwrap_or_default() as u64) + 
             Duration::from_secs(self.seconds.unwrap_or_default() as u64)
         ).as_secs_f32()
@@ -82,7 +86,10 @@ impl Timestamp {
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match (self.hours, self.minutes, self.seconds) {
+            // dont show the hour if it's 0
+            (Some(hour), Some(min), Some(sec)) if hour == 0 => write!(f, "{:02}:{:02}", min, sec),
             (Some(hour), Some(min), Some(sec)) => write!(f, "{hour}:{:02}:{:02}", min, sec),
+            
             (None, Some(min), Some(sec)) => write!(f, "{:02}:{:02}", min, sec),
             (None, None, Some(sec)) => write!(f, "{:02}", sec),
             (None, None, None) => write!(f, ""),

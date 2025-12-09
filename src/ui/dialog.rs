@@ -49,18 +49,8 @@ pub fn update(state: &State, message: DialogMessage) -> Task<Action<>> {
             };
 
             // additionally check if to timestamp is bigger than the video's length
-            if crate::timestamp_to_secs(&state.to) > crate::timestamp_to_secs(&length) {
+            if state.to.total_secs() > length.total_secs() {
                 return error_async!("'to' timestamp is longer than the video's duration");
-            }
-
-            // and check if "from" is bigger than "to"
-            if crate::timestamp_to_secs(&state.from) > crate::timestamp_to_secs(&state.to) {
-                return error_async!("'from' timestamp is longer than the 'to' timestamp");
-            }
-
-            // and check if the timestamps are the same
-            if crate::timestamp_to_secs(&state.from) == crate::timestamp_to_secs(&state.to) {
-                return error_async!("the 'from' and 'to' timestamps cannot be the same");
             }
 
             let file_name = match state.file.file_name() {

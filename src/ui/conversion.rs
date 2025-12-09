@@ -8,6 +8,7 @@ use iced::futures::SinkExt;
 
 use arboard::Clipboard;
 
+use crate::timestamp::Timestamp;
 use crate::ui::{Action, State};
 use crate::error_async;
 use crate::ffmpeg::ConversionInput;
@@ -30,15 +31,15 @@ pub struct ConversionState {
     pub channel: Option<mpsc::Sender<ConversionInput>>,
 
     // we make a copy so that the user can still freely change the timestamps while the conversion is happening
-    pub from: String,
-    pub to: String,
+    pub from: Timestamp,
+    pub to: Timestamp,
 
     pub copy_clipboard: bool
 }
 
 impl ConversionState {
     // set all the necessary fields when a conversion begins
-    fn set(&mut self, copy_clipboard: bool, from: String, to: String) {
+    fn set(&mut self, copy_clipboard: bool, from: Timestamp, to: Timestamp) {
         self.converting = true;
         self.copy_clipboard = copy_clipboard;
 
@@ -83,7 +84,7 @@ pub fn update(conversion: &mut ConversionState, message: ConversionMessage) -> T
             progress.remove(0);
             progress.remove(0);
 
-            conversion.progress = crate::timestamp_to_secs(&progress);
+            conversion.progress = Timestamp::new(&progress).unwrap_or_default().total_secs();
 
             Task::none()
         }
@@ -105,7 +106,7 @@ pub fn progress_view(conversion: &ConversionState) -> Element<'_, Action> {
         return space().into();
     }
 
-    let max = crate::timestamp_to_secs(&conversion.to) - crate::timestamp_to_secs(&conversion.from);
+    let max = conversion.to.total_secs() - conversion.from.total_secs();
     let percentage = (conversion.progress / max * 100.0).floor();
 
     column![

@@ -9,7 +9,6 @@
 
 use std::env;
 use std::path::Path;
-use std::time::Duration;
 
 use iced::window::Settings;
 
@@ -17,18 +16,6 @@ mod ui;
 mod error;
 mod ffmpeg;
 mod timestamp;
-
-// accepts a time stamp in MM:SS format and returns the amount of seconds it represents
-pub fn timestamp_to_secs(timestamp: &str) -> f32 {
-    let split: Vec<&str> = timestamp.split(':').collect();
-
-    let minutes = split[0].parse::<u64>()
-        .expect("we have already established that the timestamp is valid");
-    let seconds = split[1].parse::<f32>()
-        .expect("we have already established that the timestamp is valid");
-
-    (Duration::from_mins(minutes) + Duration::from_secs_f32(seconds)).as_secs_f32()
-}
 
 fn main() {
     // get input video file command line argument, this can be None

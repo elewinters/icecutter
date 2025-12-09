@@ -12,11 +12,15 @@ use conversion::{ConversionMessage, ConversionState};
 use dialog::DialogMessage;
 
 use crate::ffmpeg;
+use crate::timestamp::Timestamp;
 
 #[derive(Debug, Clone)]
 pub struct State {
-    pub from: String,
-    pub to: String,
+    pub from: Timestamp,
+    pub to: Timestamp,
+
+    pub from_str: String,
+    pub to_str: String,
 
     pub file: PathBuf,
     pub fps: String,
@@ -30,8 +34,11 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            from: String::default(),
-            to: String::default(),
+            from: Timestamp::default(),
+            to: Timestamp::default(),
+
+            from_str: String::default(),
+            to_str: String::default(),
 
             file: PathBuf::default(),
             fps: String::default(),
@@ -79,9 +86,14 @@ pub fn initialize_state(file: &Path) -> Result<State, String> {
         return Err("input file does not contain a valid video stream".to_owned());
     }
 
+    let empty_timestamp = Timestamp::new("00:00").unwrap();
+
     Ok(State {
-        from: "00:00".to_owned(),
-        to: length,
+        from: empty_timestamp.clone(),
+        to: length.clone(),
+
+        from_str: empty_timestamp.to_string(),
+        to_str: length.to_string(),
 
         file: file.into(),
         fps,
@@ -99,8 +111,22 @@ impl State {
             // state changes
             Action::UpdateState(msg) => {
                 match msg {
-                    StateMessage::From(s) => self.from = s,
-                    StateMessage::To(s) => self.to = s,
+                    StateMessage::From(s) => {
+                        let Ok(timestamp) = Timestamp::new(&s) else {
+                            return Task::none() 
+                        };
+
+                        self.from = timestamp;
+                        self.from_str = s;
+                    },
+                    StateMessage::To(s) => {
+                        let Ok(timestamp) = Timestamp::new(&s) else {
+                            return Task::none() 
+                        };
+
+                        self.to = timestamp;
+                        self.to_str = s;
+                    },
                     
                     StateMessage::File(s) => self.file = PathBuf::from(s),
                     StateMessage::Fps(s) => self.fps = s,
@@ -146,11 +172,11 @@ impl State {
 
                     // from:to textboxes
                     row![
-                        text_input("from", &self.from)
+                        text_input("from", &self.from_str)
                             .on_input(|s| Action::UpdateState(StateMessage::From(s))),
                         text("-")
                             .size(20),
-                        text_input("to", &self.to)
+                        text_input("to", &self.to_str)
                             .on_input(|s| Action::UpdateState(StateMessage::To(s))),
                     ]
                     .spacing(10)
