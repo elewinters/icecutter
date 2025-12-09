@@ -117,17 +117,15 @@ pub fn is_video(path: &Path) -> bool {
     #[cfg(target_os = "windows")]
     command.creation_flags(CREATE_NO_WINDOW);
 
-    let output = match command.output() {
-        Ok(x) => x,
-        Err(_) => return false
+    let Ok(output) = command.output() else {
+        return false;
     };
 
     let output = String::from_utf8_lossy(&output.stdout);
     let output: Vec<&str> = output.split('\n').collect();
 
-    let text = match output.first() {
-        Some(x) => x,
-        None => return false
+    let Some(text) = output.first() else {
+        return false;
     };
 
     if text.trim() == "video" {
