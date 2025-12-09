@@ -4,15 +4,14 @@ use std::result::Result;
 use iced::*;
 use iced::widget::{*, column};
 
-use crate::ffmpeg;
-
 pub mod conversion;
-use conversion::*;
-
+mod validation;
 mod dialog;
+
+use conversion::{ConversionMessage, ConversionState};
 use dialog::DialogMessage;
 
-mod validation;
+use crate::ffmpeg;
 
 #[derive(Debug, Clone)]
 pub struct State {

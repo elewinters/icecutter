@@ -6,11 +6,12 @@ use std::process::{exit, Child, Command, Stdio};
 
 use std::error::Error;
 
-use iced::futures::channel::mpsc;
-use iced::futures::sink::SinkExt;
-use iced::futures::Stream;
-use iced::futures::StreamExt;
 use iced::stream;
+use iced::futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
+
+use crate::ui::{self, Action};
+use crate::error;
+use crate::ui::conversion::ConversionMessage;
 
 // we apply this to every Command we create (on windows) as to not create a console window
 // not doing this causes flashing console windows to keep popping up every time an ffmpeg/ffprobe command is ran
@@ -19,10 +20,6 @@ use iced::stream;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
-
-use crate::ui::{self, Action};
-use crate::error;
-use crate::ui::conversion::ConversionMessage;
 
 pub enum Program {
     Ffmpeg,

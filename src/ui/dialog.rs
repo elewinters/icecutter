@@ -1,8 +1,8 @@
 use iced::Task;
 use crate::error_async;
 
-use super::conversion::*;
 use super::State;
+use super::conversion::ConversionMessage;
 
 use crate::ui::{Action, StateMessage, initialize_state};
 
