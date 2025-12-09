@@ -87,7 +87,7 @@ impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match (self.hours, self.minutes, self.seconds) {
             // dont show the hour if it's 0
-            (Some(hour), Some(min), Some(sec)) if hour == 0 => write!(f, "{:02}:{:02}", min, sec),
+            (Some(0), Some(min), Some(sec)) => write!(f, "{:02}:{:02}", min, sec),
             (Some(hour), Some(min), Some(sec)) => write!(f, "{hour}:{:02}:{:02}", min, sec),
             
             (None, Some(min), Some(sec)) => write!(f, "{:02}:{:02}", min, sec),

@@ -188,7 +188,7 @@ pub fn video_length(path: &Path) -> Result<Timestamp, Box<dyn Error>> {
     let minutes = &output[1];
     let seconds = &output[2];
 
-    Ok(Timestamp::new(&format!("{hours}:{minutes}:{seconds}"))?)
+    Timestamp::new(&format!("{hours}:{minutes}:{seconds}"))
 }
 
 // returns the FPS of the video
