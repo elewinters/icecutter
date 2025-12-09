@@ -23,7 +23,7 @@ pub struct State {
     pub fps: String,
 
     pub lower_720p: bool,
-    pub clipboard: bool,
+    pub copy_clipboard: bool,
 
     pub conversion: ConversionState
 }
@@ -38,7 +38,7 @@ impl Default for State {
             fps: String::default(),
 
             lower_720p: true,
-            clipboard: true,
+            copy_clipboard: true,
             
             conversion: ConversionState::default(),
         }
@@ -107,7 +107,7 @@ impl State {
                     StateMessage::Fps(s) => self.fps = s,
 
                     StateMessage::Lower720p(b) => self.lower_720p = b,
-                    StateMessage::CopyClipboard(b) => self.clipboard = b,
+                    StateMessage::CopyClipboard(b) => self.copy_clipboard = b,
 
                     // let's keep our conversion state
                     StateMessage::NewState(state) => *self = State {
@@ -185,7 +185,7 @@ impl State {
                         .on_toggle(|b| Action::UpdateState(StateMessage::Lower720p(b))),
 
                     // copy to clipboard checkbox
-                    checkbox(self.clipboard)
+                    checkbox(self.copy_clipboard)
                         .label("copy to clipboard")
                         .on_toggle(|b| Action::UpdateState(StateMessage::CopyClipboard(b))),
                     
