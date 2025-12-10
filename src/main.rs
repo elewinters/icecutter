@@ -28,20 +28,20 @@ fn main() {
     let state = match file {
         Some(f) => State::new(Path::new(&f)).unwrap_or_else(|err| {
             error!("failed to initialize state: {err}");
-            ui::State::default()
+            State::default()
         }),
-        None => ui::State::default()
+        None => State::default()
     };
 
     // run iced application with custom initial state
-    let result = iced::application(move || state.clone(), ui::State::update, ui::State::view)
+    let result = iced::application(move || state.clone(), State::update, State::view)
         .title("icecutter")
         .window(Settings {
             size: (640.0, 480.0).into(),
             resizable: false,
             ..Default::default()
         })
-        .subscription(ui::State::subscription)
+        .subscription(State::subscription)
         .run();
     
     if let Err(err) = result {
