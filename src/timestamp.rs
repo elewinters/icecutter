@@ -4,7 +4,7 @@ use std::time::Duration;
 
 // a time stamp with hours, minutes and seconds
 // can be empty but not invalid
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct Timestamp {
     hours: Option<u8>,
     minutes: Option<u8>,

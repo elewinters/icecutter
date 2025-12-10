@@ -14,7 +14,7 @@ use dialog::Dialog;
 use crate::ffmpeg;
 use crate::timestamp::Timestamp;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct State {
     pub from: Timestamp,
     pub to: Timestamp,
@@ -82,7 +82,7 @@ impl State {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum StateUpdate {
     From(String),
     To(String),
@@ -96,7 +96,7 @@ pub enum StateUpdate {
     New(State)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Action {
     None,
 

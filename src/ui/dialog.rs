@@ -6,7 +6,7 @@ use super::conversion::Conversion;
 
 use crate::ui::{Action, StateUpdate};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Dialog {
     Select,
     SelectFinished(Option<rfd::FileHandle>),

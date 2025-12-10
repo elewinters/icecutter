@@ -13,7 +13,7 @@ use crate::ui::{Action, State};
 use crate::error_async;
 use crate::ffmpeg::ConversionInput;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Conversion {
     Ready(mpsc::Sender<ConversionInput>),
     
@@ -24,7 +24,7 @@ pub enum Conversion {
     Finished(PathBuf),
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone)]
 pub struct ConversionState {
     pub converting: bool,
     pub progress: f32,
