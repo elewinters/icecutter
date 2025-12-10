@@ -14,7 +14,7 @@ use crate::error_async;
 use crate::ffmpeg::ConversionInput;
 
 #[derive(Debug, Clone)]
-pub enum ConversionMessage {
+pub enum Conversion {
     Ready(mpsc::Sender<ConversionInput>),
     Begin(State, PathBuf),
     Error(String),
@@ -57,24 +57,24 @@ impl ConversionState {
     }
 }
 
-pub fn update(conversion: &mut ConversionState, message: ConversionMessage) -> Task<Action> {
+pub fn update(conversion: &mut ConversionState, message: Conversion) -> Task<Action> {
     match message {
         // conversion subscription messages
-        ConversionMessage::Ready(sender) => {
+        Conversion::Ready(sender) => {
             conversion.channel = Some(sender);
             Task::none()
         }
 
-        ConversionMessage::Begin(state, output_file) => {
+        Conversion::Begin(state, output_file) => {
             let mut sender = conversion.channel.clone().expect("channel has already been in initialized with the ConversionReady message");
 
             conversion.set(state.copy_clipboard, state.from.clone(), state.to.clone());
             Task::perform(async move { sender.send(ConversionInput::Start{state, output_file}).await }, |_| Action::None)
         }
 
-        ConversionMessage::Error(err) => error_async!("ffmpeg conversion error: {err}"),
+        Conversion::Error(err) => error_async!("ffmpeg conversion error: {err}"),
 
-        ConversionMessage::Progress(mut progress) => {
+        Conversion::Progress(mut progress) => {
             if progress == "N/A" {
                 return Task::none();
             }
@@ -89,7 +89,7 @@ pub fn update(conversion: &mut ConversionState, message: ConversionMessage) -> T
             Task::none()
         }
 
-        ConversionMessage::Finished(path) => {
+        Conversion::Finished(path) => {
             if conversion.copy_clipboard {
                 let mut clipboard = Clipboard::new().unwrap();
                 clipboard.set().file_list(&[path]).unwrap();

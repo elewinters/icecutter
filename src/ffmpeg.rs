@@ -12,7 +12,7 @@ use iced::futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
 use crate::timestamp::Timestamp;
 use crate::ui::{self, Action};
 use crate::error;
-use crate::ui::conversion::ConversionMessage;
+use crate::ui::conversion::Conversion;
 
 // we apply this to every Command we create (on windows) as to not create a console window
 // not doing this causes flashing console windows to keep popping up every time an ffmpeg/ffprobe command is ran
@@ -288,7 +288,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Action> {
         let (msg_tx, mut msg_rx) = mpsc::channel(1024);
 
         // send the sender to the application
-        output.send(Action::Conversion(ConversionMessage::Ready(msg_tx))).await.unwrap();
+        output.send(Action::Conversion(Conversion::Ready(msg_tx))).await.unwrap();
 
         loop {
             // await the Start message
@@ -297,18 +297,18 @@ pub fn conversion_subscription() -> impl Stream<Item = Action> {
             let child = match convert_process(&state, &output_file) {
                 Ok(x) => x,
                 Err(err) => { 
-                    output.send(Action::Conversion(ConversionMessage::Error(format!("failed to start ffmpeg process: {err}")))).await.unwrap();
+                    output.send(Action::Conversion(Conversion::Error(format!("failed to start ffmpeg process: {err}")))).await.unwrap();
                     continue;
                 }
             };
 
             let Some(stdout) = child.stdout else {
-                output.send(Action::Conversion(ConversionMessage::Error("failed to capture standard output of ffmpeg process".to_owned()))).await.unwrap();
+                output.send(Action::Conversion(Conversion::Error("failed to capture standard output of ffmpeg process".to_owned()))).await.unwrap();
                 continue;
             };
 
             let Some(stderr) = child.stderr else {
-                output.send(Action::Conversion(ConversionMessage::Error("failed to capture standard error output of ffmpeg process".to_owned()))).await.unwrap();
+                output.send(Action::Conversion(Conversion::Error("failed to capture standard error output of ffmpeg process".to_owned()))).await.unwrap();
                 continue;
             };
 
@@ -355,13 +355,13 @@ pub fn conversion_subscription() -> impl Stream<Item = Action> {
             // read from progress channel, Ok means to send a subscription progress message, Err means to send a ConversionError message
             while let Some(input) = process_rx.next().await {
                 match input {
-                    Ok(progress) => output.send(Action::Conversion(ConversionMessage::Progress(progress))).await.unwrap(),
-                    Err(err) => output.send(Action::Conversion(ConversionMessage::Error(err))).await.unwrap()
+                    Ok(progress) => output.send(Action::Conversion(Conversion::Progress(progress))).await.unwrap(),
+                    Err(err) => output.send(Action::Conversion(Conversion::Error(err))).await.unwrap()
                 }
             }
 
             // no more messages from the progress channel, we have completed the operation
-            output.send(Action::Conversion(ConversionMessage::Finished(output_file))).await.unwrap();
+            output.send(Action::Conversion(Conversion::Finished(output_file))).await.unwrap();
         }
     })
 }

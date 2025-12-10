@@ -8,8 +8,8 @@ pub mod conversion;
 mod validation;
 mod dialog;
 
-use conversion::{ConversionMessage, ConversionState};
-use dialog::DialogMessage;
+use conversion::{Conversion, ConversionState};
+use dialog::Dialog;
 
 use crate::ffmpeg;
 use crate::timestamp::Timestamp;
@@ -52,7 +52,7 @@ impl Default for State {
 }
 
 #[derive(Debug, Clone)]
-pub enum StateMessage {
+pub enum StateUpdate {
     From(String),
     To(String),
 
@@ -69,9 +69,9 @@ pub enum StateMessage {
 pub enum Action {
     None,
 
-    UpdateState(StateMessage),
-    Conversion(ConversionMessage),
-    Dialog(DialogMessage)
+    StateUpdate(StateUpdate),
+    Conversion(Conversion),
+    Dialog(Dialog)
 }
 
 // initializes the state from a video file
@@ -109,9 +109,9 @@ impl State {
             Action::None => Task::none(),
 
             // state changes
-            Action::UpdateState(msg) => {
+            Action::StateUpdate(msg) => {
                 match msg {
-                    StateMessage::From(s) => {
+                    StateUpdate::From(s) => {
                         let Ok(timestamp) = Timestamp::new(&s) else {
                             return Task::none() 
                         };
@@ -119,7 +119,7 @@ impl State {
                         self.from = timestamp;
                         self.from_str = s;
                     },
-                    StateMessage::To(s) => {
+                    StateUpdate::To(s) => {
                         let Ok(timestamp) = Timestamp::new(&s) else {
                             return Task::none() 
                         };
@@ -128,14 +128,14 @@ impl State {
                         self.to_str = s;
                     },
                     
-                    StateMessage::File(s) => self.file = PathBuf::from(s),
-                    StateMessage::Fps(s) => self.fps = s,
+                    StateUpdate::File(s) => self.file = PathBuf::from(s),
+                    StateUpdate::Fps(s) => self.fps = s,
 
-                    StateMessage::Lower720p(b) => self.lower_720p = b,
-                    StateMessage::CopyClipboard(b) => self.copy_clipboard = b,
+                    StateUpdate::Lower720p(b) => self.lower_720p = b,
+                    StateUpdate::CopyClipboard(b) => self.copy_clipboard = b,
 
                     // let's keep our conversion state
-                    StateMessage::NewState(state) => *self = State {
+                    StateUpdate::NewState(state) => *self = State {
                         conversion: self.conversion.clone(),
                         ..state
                     }
@@ -173,11 +173,11 @@ impl State {
                     // from:to textboxes
                     row![
                         text_input("from", &self.from_str)
-                            .on_input(|s| Action::UpdateState(StateMessage::From(s))),
+                            .on_input(|s| Action::StateUpdate(StateUpdate::From(s))),
                         text("-")
                             .size(20),
                         text_input("to", &self.to_str)
-                            .on_input(|s| Action::UpdateState(StateMessage::To(s))),
+                            .on_input(|s| Action::StateUpdate(StateUpdate::To(s))),
                     ]
                     .spacing(10)
                     .width(150),
@@ -185,14 +185,14 @@ impl State {
                     // input file
                     row![
                         button("select")
-                            .on_press(Action::Dialog(DialogMessage::Select)),
+                            .on_press(Action::Dialog(Dialog::Select)),
 
                         space()
                             .width(10),
                             
                         container(
                             text_input("input file", &self.file.to_string_lossy())
-                                .on_input(|s| Action::UpdateState(StateMessage::File(s))),
+                                .on_input(|s| Action::StateUpdate(StateUpdate::File(s))),
                         )
                         .width(300),
                     ],
@@ -200,19 +200,19 @@ impl State {
                     // fps
                     container(
                         text_input("fps", &self.fps)
-                            .on_input(|s| Action::UpdateState(StateMessage::Fps(s))),
+                            .on_input(|s| Action::StateUpdate(StateUpdate::Fps(s))),
                     )
                     .width(75),
                     
                     // 720p checkbox
                     checkbox(self.lower_720p)
                         .label("lower resolution to 720p")
-                        .on_toggle(|b| Action::UpdateState(StateMessage::Lower720p(b))),
+                        .on_toggle(|b| Action::StateUpdate(StateUpdate::Lower720p(b))),
 
                     // copy to clipboard checkbox
                     checkbox(self.copy_clipboard)
                         .label("copy to clipboard")
-                        .on_toggle(|b| Action::UpdateState(StateMessage::CopyClipboard(b))),
+                        .on_toggle(|b| Action::StateUpdate(StateUpdate::CopyClipboard(b))),
                     
                     // errors
                     validation::error_view(self),
@@ -220,7 +220,7 @@ impl State {
                     // convert button
                     button("convert")
                         .on_press_maybe(match (validation::validate_state(self).is_empty(), self.conversion.converting) {
-                            (true, false) => Some(Action::Dialog(DialogMessage::Convert)),
+                            (true, false) => Some(Action::Dialog(Dialog::Convert)),
                             _ => None
                         }),
 
