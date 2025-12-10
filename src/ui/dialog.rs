@@ -36,7 +36,7 @@ pub fn update(state: &State, message: Dialog) -> Task<Action<>> {
                 Err(err) => return error_async!("failed to initialize state: {err}")
             };
 
-            Task::done(Action::StateUpdate(StateUpdate::NewState(state)))
+            Task::done(Action::StateUpdate(StateUpdate::New(state)))
         }
 
         Dialog::Convert => {

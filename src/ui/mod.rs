@@ -62,7 +62,7 @@ pub enum StateUpdate {
     Lower720p(bool),
     CopyClipboard(bool),
 
-    NewState(State)
+    New(State)
 }
 
 #[derive(Debug, Clone)]
@@ -135,7 +135,7 @@ impl State {
                     StateUpdate::CopyClipboard(b) => self.copy_clipboard = b,
 
                     // let's keep our conversion state
-                    StateUpdate::NewState(state) => *self = State {
+                    StateUpdate::New(state) => *self = State {
                         conversion: self.conversion.clone(),
                         ..state
                     }
