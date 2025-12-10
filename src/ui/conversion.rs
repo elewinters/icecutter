@@ -76,18 +76,12 @@ pub fn update(conversion: &mut ConversionState, message: Conversion) -> Task<Act
 
         Conversion::Error(err) => error_async!("ffmpeg conversion error: {err}"),
 
-        Conversion::Progress(mut progress) => {
+        Conversion::Progress(progress) => {
             if progress == "N/A" {
                 return Task::none();
             }
-            
-            // remove hour
-            progress.remove(0);
-            progress.remove(0);
-            progress.remove(0);
 
             conversion.progress = Timestamp::new(&progress).unwrap_or_default().total_secs();
-
             Task::none()
         }
 
