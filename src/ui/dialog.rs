@@ -15,7 +15,7 @@ pub enum Dialog {
     ConvertFinished(Option<rfd::FileHandle>)
 }
 
-pub fn update(state: &State, message: Dialog) -> Task<Action<>> {
+pub fn update(state: &State, message: Dialog) -> Task<Action> {
     match message {
         Dialog::Select => Task::perform(
             rfd::AsyncFileDialog::new()
