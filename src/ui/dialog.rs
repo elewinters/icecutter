@@ -77,7 +77,7 @@ pub fn update(state: &State, message: Dialog) -> Task<Action<>> {
             let output_file = file.path().to_path_buf();
             let state = state.clone();
 
-            Task::done(Action::Conversion(Conversion::Begin(state, output_file)))
+            Task::done(Action::Conversion(Conversion::Start(state, output_file)))
         }
     }
 }

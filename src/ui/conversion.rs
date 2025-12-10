@@ -16,7 +16,9 @@ use crate::ffmpeg::ConversionInput;
 #[derive(Debug, Clone)]
 pub enum Conversion {
     Ready(mpsc::Sender<ConversionInput>),
-    Begin(State, PathBuf),
+    
+    Start(State, PathBuf),
+
     Error(String),
     Progress(String),
     Finished(PathBuf),
@@ -65,7 +67,7 @@ pub fn update(conversion: &mut ConversionState, message: Conversion) -> Task<Act
             Task::none()
         }
 
-        Conversion::Begin(state, output_file) => {
+        Conversion::Start(state, output_file) => {
             let mut sender = conversion.channel.clone().expect("channel has already been in initialized with the ConversionReady message");
 
             conversion.set(state.copy_clipboard, state.from.clone(), state.to.clone());
