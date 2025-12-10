@@ -4,7 +4,7 @@ use crate::error_async;
 use super::State;
 use super::conversion::Conversion;
 
-use crate::ui::{Action, StateUpdate, initialize_state};
+use crate::ui::{Action, StateUpdate};
 
 #[derive(Debug, Clone)]
 pub enum Dialog {
@@ -31,7 +31,7 @@ pub fn update(state: &State, message: Dialog) -> Task<Action<>> {
             };
 
             // initialize state based on selected file
-            let state = match initialize_state(file.path()) {
+            let state = match State::new(file.path()) {
                 Ok(x) => x,
                 Err(err) => return error_async!("failed to initialize state: {err}")
             };
@@ -41,9 +41,9 @@ pub fn update(state: &State, message: Dialog) -> Task<Action<>> {
 
         Dialog::Convert => {
             // check if input file is a valid video
-            // yes this may result in initialize_state being called twice if the user has used the select file dialog, however the user can also input the file path without using it
+            // yes this may result in State::new being called twice if the user has used the select file dialog, however the user can also input the file path without using it
             // in which case if the user inputted a non-video into that field, ffmpeg would error out
-            let length = match initialize_state(&state.file) {
+            let length = match State::new(&state.file) {
                 Ok(state) => state.to,
                 Err(err) => return error_async!("invalid input file: {err}")
             };

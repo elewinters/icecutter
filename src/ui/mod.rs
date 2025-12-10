@@ -51,6 +51,37 @@ impl Default for State {
     }
 }
 
+impl State {
+    // initializes the state from a video file
+    pub fn new(file: &Path) -> Result<State, String> {
+        let length = ffmpeg::video_length(file)
+            .map_err(|err| format!("failed to get video length: {err}"))?;
+
+        let fps = ffmpeg::video_fps(file)
+            .map_err(|err| format!("failed to get video fps: {err}"))?;
+
+        if !ffmpeg::is_video(file) {
+            return Err("input file does not contain a valid video stream".to_owned());
+        }
+
+        let empty_timestamp = Timestamp::new("00:00").unwrap();
+
+        Ok(State {
+            from: empty_timestamp.clone(),
+            to: length.clone(),
+
+            from_str: empty_timestamp.to_string(),
+            to_str: length.to_string(),
+
+            file: file.into(),
+            fps,
+
+            ..Default::default()
+        })
+    }
+}
+
+
 #[derive(Debug, Clone)]
 pub enum StateUpdate {
     From(String),
@@ -72,34 +103,6 @@ pub enum Action {
     StateUpdate(StateUpdate),
     Conversion(Conversion),
     Dialog(Dialog)
-}
-
-// initializes the state from a video file
-pub fn initialize_state(file: &Path) -> Result<State, String> {
-    let length = ffmpeg::video_length(file)
-        .map_err(|err| format!("failed to get video length: {err}"))?;
-
-    let fps = ffmpeg::video_fps(file)
-        .map_err(|err| format!("failed to get video fps: {err}"))?;
-
-    if !ffmpeg::is_video(file) {
-        return Err("input file does not contain a valid video stream".to_owned());
-    }
-
-    let empty_timestamp = Timestamp::new("00:00").unwrap();
-
-    Ok(State {
-        from: empty_timestamp.clone(),
-        to: length.clone(),
-
-        from_str: empty_timestamp.to_string(),
-        to_str: length.to_string(),
-
-        file: file.into(),
-        fps,
-
-        ..Default::default()
-    })
 }
 
 impl State {

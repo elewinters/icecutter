@@ -17,6 +17,8 @@ mod error;
 mod ffmpeg;
 mod timestamp;
 
+use ui::State;
+
 fn main() {
     // get input video file command line argument, this can be None
     let file: Option<String> = env::args().nth(1);
@@ -24,7 +26,7 @@ fn main() {
     // initialize state if file argument exists
     // if initialization fails, fall back to default state
     let state = match file {
-        Some(f) => ui::initialize_state(Path::new(&f)).unwrap_or_else(|err| {
+        Some(f) => State::new(Path::new(&f)).unwrap_or_else(|err| {
             error!("failed to initialize state: {err}");
             ui::State::default()
         }),
