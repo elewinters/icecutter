@@ -106,9 +106,9 @@ pub enum Action {
 }
 
 impl State {
-    pub fn update(&mut self, message: Action) -> Task<Action> {
-        match message {
-            // dummy message
+    pub fn update(&mut self, action: Action) -> Task<Action> {
+        match action {
+            // dummy action
             Action::None => Task::none(),
 
             // state changes
