@@ -50,7 +50,7 @@ pub fn validate_state(state: &State) -> Vec<String> {
 pub fn error_view(state: &State) -> Element<'_, Action> {
     let errors = validate_state(state);
     
-    if errors.is_empty() {
+    if errors.is_empty() || state.conversion.converting {
         return space().into();
     }
 
