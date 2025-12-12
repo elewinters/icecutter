@@ -38,6 +38,11 @@ pub fn validate_state(state: &State) -> Vec<String> {
         errors.push("input file does not exist".to_owned());
     }
 
+    // check if input file is a gif
+    if let Some(ext) = state.file.extension() && ext == "gif" {
+        errors.push("GIFs are not supported".to_owned());
+    };
+
     // check if fps field is a valid number
     if state.fps.parse::<u32>().is_err() {
         errors.push("'fps' field is not a valid unsigned integer".to_owned())
