@@ -325,7 +325,7 @@ pub fn conversion_subscription() -> impl Stream<Item = Action> {
                         continue;
                     };
 
-                    if line.starts_with("Error") {
+                    if line.contains("Error") {
                         let _ = error_tx.try_send(Err(line));
                     }
                 }
@@ -356,7 +356,10 @@ pub fn conversion_subscription() -> impl Stream<Item = Action> {
             while let Some(input) = process_rx.next().await {
                 match input {
                     Ok(progress) => output.send(Action::Conversion(Conversion::Progress(progress))).await.unwrap(),
-                    Err(err) => output.send(Action::Conversion(Conversion::Error(err))).await.unwrap()
+                    Err(err) => { 
+                        output.send(Action::Conversion(Conversion::Error(err))).await.unwrap();
+                        break;
+                    }
                 }
             }
 
