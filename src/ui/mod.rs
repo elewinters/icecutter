@@ -117,29 +117,29 @@ impl State {
             // state changes
             Action::StateUpdate(msg) => {
                 match msg {
-                    StateUpdate::From(s) => {
-                        let Ok(timestamp) = Timestamp::new(&s) else {
+                    StateUpdate::From(x) => {
+                        let Ok(timestamp) = Timestamp::new(&x) else {
                             return Task::none() 
                         };
 
                         self.from = timestamp;
-                        self.from_str = s;
+                        self.from_str = x;
                     },
-                    StateUpdate::To(s) => {
-                        let Ok(timestamp) = Timestamp::new(&s) else {
+                    StateUpdate::To(x) => {
+                        let Ok(timestamp) = Timestamp::new(&x) else {
                             return Task::none() 
                         };
 
                         self.to = timestamp;
-                        self.to_str = s;
+                        self.to_str = x;
                     },
                     
-                    StateUpdate::File(s) => self.file = PathBuf::from(s),
-                    StateUpdate::Fps(s) => self.fps = s,
+                    StateUpdate::File(x) => self.file = PathBuf::from(x),
+                    StateUpdate::Fps(x) => self.fps = x,
 
-                    StateUpdate::Lower720p(b) => self.lower_720p = b,
-                    StateUpdate::CopyClipboard(b) => self.copy_clipboard = b,
-                    StateUpdate::MuteAudio(b) => self.mute_audio = b,
+                    StateUpdate::Lower720p(x) => self.lower_720p = x,
+                    StateUpdate::CopyClipboard(x) => self.copy_clipboard = x,
+                    StateUpdate::MuteAudio(x) => self.mute_audio = x,
 
                     // let's keep our conversion state
                     StateUpdate::New(state) => *self = State {
@@ -180,11 +180,11 @@ impl State {
                     // from:to textboxes
                     row![
                         text_input("from", &self.from_str)
-                            .on_input(|s| Action::StateUpdate(StateUpdate::From(s))),
+                            .on_input(|x| Action::StateUpdate(StateUpdate::From(x))),
                         text("-")
                             .size(20),
                         text_input("to", &self.to_str)
-                            .on_input(|s| Action::StateUpdate(StateUpdate::To(s))),
+                            .on_input(|x| Action::StateUpdate(StateUpdate::To(x))),
                     ]
                     .spacing(10)
                     .width(150),
@@ -199,7 +199,7 @@ impl State {
                             
                         container(
                             text_input("input file", &self.file.to_string_lossy())
-                                .on_input(|s| Action::StateUpdate(StateUpdate::File(s))),
+                                .on_input(|x| Action::StateUpdate(StateUpdate::File(x))),
                         )
                         .width(300),
                     ],
@@ -207,24 +207,24 @@ impl State {
                     // fps
                     container(
                         text_input("fps", &self.fps)
-                            .on_input(|s| Action::StateUpdate(StateUpdate::Fps(s))),
+                            .on_input(|x| Action::StateUpdate(StateUpdate::Fps(x))),
                     )
                     .width(75),
                     
                     // 720p checkbox
                     checkbox(self.lower_720p)
                         .label("lower resolution to 720p")
-                        .on_toggle(|b| Action::StateUpdate(StateUpdate::Lower720p(b))),
+                        .on_toggle(|x| Action::StateUpdate(StateUpdate::Lower720p(x))),
 
                     // copy to clipboard checkbox
                     checkbox(self.copy_clipboard)
                         .label("copy to clipboard")
-                        .on_toggle(|b| Action::StateUpdate(StateUpdate::CopyClipboard(b))),
+                        .on_toggle(|x| Action::StateUpdate(StateUpdate::CopyClipboard(x))),
 
                     // mute audio checkbox
                     checkbox(self.mute_audio)
                         .label("mute audio")
-                        .on_toggle(|b| Action::StateUpdate(StateUpdate::MuteAudio(b))),
+                        .on_toggle(|x| Action::StateUpdate(StateUpdate::MuteAudio(x))),
                     
                     // errors
                     validation::error_view(self),
