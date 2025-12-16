@@ -115,41 +115,38 @@ impl State {
             Action::None => Task::none(),
 
             // state changes
-            Action::StateUpdate(msg) => {
-                match msg {
-                    StateUpdate::From(x) => {
-                        let Ok(timestamp) = Timestamp::new(&x) else {
-                            return Task::none() 
-                        };
+            Action::StateUpdate(msg) => match msg {
+                StateUpdate::From(x) => {
+                    let Ok(timestamp) = Timestamp::new(&x) else {
+                        return Task::none() 
+                    };
 
-                        self.from = timestamp;
-                        self.from_str = x;
-                    },
-                    StateUpdate::To(x) => {
-                        let Ok(timestamp) = Timestamp::new(&x) else {
-                            return Task::none() 
-                        };
+                    self.from = timestamp;
+                    self.from_str = x;
+                },
+                StateUpdate::To(x) => {
+                    let Ok(timestamp) = Timestamp::new(&x) else {
+                        return Task::none() 
+                    };
 
-                        self.to = timestamp;
-                        self.to_str = x;
-                    },
-                    
-                    StateUpdate::File(x) => self.file = PathBuf::from(x),
-                    StateUpdate::Fps(x) => self.fps = x,
+                    self.to = timestamp;
+                    self.to_str = x;
+                },
+                
+                StateUpdate::File(x) => self.file = PathBuf::from(x),
+                StateUpdate::Fps(x) => self.fps = x,
 
-                    StateUpdate::Lower720p(x) => self.lower_720p = x,
-                    StateUpdate::CopyClipboard(x) => self.copy_clipboard = x,
-                    StateUpdate::MuteAudio(x) => self.mute_audio = x,
+                StateUpdate::Lower720p(x) => self.lower_720p = x,
+                StateUpdate::CopyClipboard(x) => self.copy_clipboard = x,
+                StateUpdate::MuteAudio(x) => self.mute_audio = x,
 
-                    // let's keep our conversion state
-                    StateUpdate::New(state) => *self = State {
-                        conversion: self.conversion.clone(),
-                        ..state
-                    }
-                };
-
-                Task::none()
-            },
+                // let's keep our conversion state
+                StateUpdate::New(state) => *self = State {
+                    conversion: self.conversion.clone(),
+                    ..state
+                }
+            }
+            .into(),
 
             // conversion messages
             Action::Conversion(msg) => conversion::update(&mut self.conversion, msg),
