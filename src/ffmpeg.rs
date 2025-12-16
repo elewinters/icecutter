@@ -53,11 +53,11 @@ fn program_path(program: Program) -> PathBuf {
     exe_dir.pop();
 
     // get path of specified program from PATH variable
-    // returns Ok(path) if it was found or Err(()) if it wasn't
-    let env_path = || -> Result<PathBuf, ()> {
+    // returns Some(path) if it was found or None if it wasn't
+    let env_path = || -> Option<PathBuf> {
         // get PATH environment variable
         let Some(paths) = env::var_os("PATH") else {
-            return Err(());
+            return None;
         };
 
         // iterate over every directory in the PATH
@@ -68,30 +68,30 @@ fn program_path(program: Program) -> PathBuf {
             // check if such path exists, and return it if it does
             // skip the bundled program path, as that counts too as being in the PATH for some reason (on windows anyway) 
             if path.exists() && path != exe_dir.join(program) {
-                return Ok(path);
+                return Some(path);
             }
         }
 
-        Err(())
+        None
     };
 
     // get path of specified program in the same directory as icecutter (these are the files that are bundled in with icecutter in the zip file)
-    // returns Ok(path) if it was found or Err(()) if it wasn't
-    let bundle_path = || -> Result<PathBuf, ()> {
+    // returns Some(path) if it was found or None if it wasn't
+    let bundle_path = || -> Option<PathBuf> {
         let path = exe_dir.join(program);
 
         if !path.exists() {
-            return Err(())
+            return None;
         }
 
-        Ok(path)
+        Some(path)
     };
 
-    if let Ok(path) = env_path() {
+    if let Some(path) = env_path() {
         return path;
     }
 
-    if let Ok(path) = bundle_path() {
+    if let Some(path) = bundle_path() {
         return path;
     }
 
