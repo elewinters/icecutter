@@ -1,6 +1,6 @@
 [package]
 name = "icecutter"
-version = "1.4.0"
+version = "1.4.1"
 rust-version = "1.91.0"
 edition = "2024"
 
