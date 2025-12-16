@@ -109,6 +109,7 @@ pub enum Action {
 }
 
 impl State {
+    #[allow(clippy::unit_arg)]
     pub fn update(&mut self, action: Action) -> Task<Action> {
         match action {
             // dummy action
