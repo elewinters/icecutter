@@ -4,12 +4,13 @@ a simple frontend for ffmpeg built with iced and rust, allowing the user to cut 
 
 meant for quickly cutting clips to upload to discord
 
-<img width="638" height="507" alt="image" src="https://github.com/user-attachments/assets/9b23dec2-cf20-4426-a5d4-707d70019345" />
+<img width="639" height="528" alt="image" src="https://github.com/user-attachments/assets/0162a4dc-f7ab-4e88-bcd1-0368eb094d3e" />
 
 features
 - the ability to cut videos down to a shorter duration
 - lowering the fps/resolution for an even lower file size
 - automatic copying of the converted file to the clipboard for easy upload
+- audio muting
 - when a video file is passed in as a command line argument, that video's information is automatically inserted into all of the input fields. this allows for easy integration with right click menus and other utilities
 - input validation (making sure that the user doesn't input invalid ffmpeg options)
 - robust graphical error handling with OS native dialogs
