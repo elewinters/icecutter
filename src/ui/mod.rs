@@ -27,6 +27,7 @@ pub struct State {
 
     pub lower_720p: bool,
     pub copy_clipboard: bool,
+    pub mute_audio: bool,
 
     pub conversion: ConversionState
 }
@@ -45,6 +46,7 @@ impl Default for State {
 
             lower_720p: true,
             copy_clipboard: true,
+            mute_audio: false,
             
             conversion: ConversionState::default(),
         }
@@ -92,6 +94,7 @@ pub enum StateUpdate {
 
     Lower720p(bool),
     CopyClipboard(bool),
+    MuteAudio(bool),
 
     New(State)
 }
@@ -136,6 +139,7 @@ impl State {
 
                     StateUpdate::Lower720p(b) => self.lower_720p = b,
                     StateUpdate::CopyClipboard(b) => self.copy_clipboard = b,
+                    StateUpdate::MuteAudio(b) => self.mute_audio = b,
 
                     // let's keep our conversion state
                     StateUpdate::New(state) => *self = State {
@@ -216,6 +220,11 @@ impl State {
                     checkbox(self.copy_clipboard)
                         .label("copy to clipboard")
                         .on_toggle(|b| Action::StateUpdate(StateUpdate::CopyClipboard(b))),
+
+                    // mute audio checkbox
+                    checkbox(self.mute_audio)
+                        .label("mute audio")
+                        .on_toggle(|b| Action::StateUpdate(StateUpdate::MuteAudio(b))),
                     
                     // errors
                     validation::error_view(self),

@@ -250,6 +250,11 @@ pub fn convert_process(state: &ui::State, output: &Path) -> io::Result<Child> {
         arguments.extend_from_slice(&["-vf", "scale=-1:720"]);
     }
 
+    // mute audio
+    if state.mute_audio {
+        arguments.push("-an");
+    }
+
     // encode as h265
     arguments.push("-vcodec");
     arguments.push("libx265");

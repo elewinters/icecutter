@@ -37,7 +37,7 @@ fn main() {
     let result = iced::application(move || state.clone(), State::update, State::view)
         .title("icecutter")
         .window(Settings {
-            size: (640.0, 480.0).into(),
+            size: (640.0, 500.0).into(),
             resizable: false,
             ..Default::default()
         })
