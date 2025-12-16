@@ -56,9 +56,7 @@ fn program_path(program: Program) -> PathBuf {
     // returns Some(path) if it was found or None if it wasn't
     let env_path = || -> Option<PathBuf> {
         // get PATH environment variable
-        let Some(paths) = env::var_os("PATH") else {
-            return None;
-        };
+        let paths = env::var_os("PATH")?;
 
         // iterate over every directory in the PATH
         for path in env::split_paths(&paths) {
